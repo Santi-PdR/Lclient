@@ -77,6 +77,10 @@ public final class MessageConfig {
 
     public synchronized void save() {
         ensureLoaded();
+        writeCurrentState();
+    }
+
+    private void writeCurrentState() {
         try {
             ConfigData data = new ConfigData(names.clone(), messages.clone(), keyCodes.clone());
             AtomicConfigIO.write(CONFIG_PATH, GSON.toJson(data));
@@ -89,7 +93,7 @@ public final class MessageConfig {
         if (loaded) return;
         loaded = true;
         if (!Files.exists(CONFIG_PATH)) {
-            save();
+            writeCurrentState();
             return;
         }
 
@@ -97,45 +101,50 @@ public final class MessageConfig {
             ConfigData data = GSON.fromJson(reader, ConfigData.class);
             if (data == null) throw new IllegalStateException("config vacía");
 
-            if (data.names != null) {
-                for (int i = 0; i < names.length && i < data.names.length; i++) {
-                    names[i] = normalizeName(data.names[i], i);
-                }
-            }
-            if (data.messages != null) {
-                for (int i = 0; i < messages.length && i < data.messages.length; i++) {
-                    messages[i] = normalizeMessage(data.messages[i]);
-                }
-            }
-            if (data.keyCodes != null) {
-                for (int i = 0; i < keyCodes.length && i < data.keyCodes.length; i++) {
-                    int key = sanitizeKey(data.keyCodes[i]);
-                    if (key < 0) {
-                        keyCodes[i] = -1;
-                        continue;
-                    }
+            boolean repaired = false;
 
-                    boolean duplicate = false;
+            if (data.names == null || data.names.length != names.length) repaired = true;
+            for (int i = 0; i < names.length; i++) {
+                String raw = data.names != null && i < data.names.length ? data.names[i] : defaultName(i);
+                String normalized = normalizeName(raw, i);
+                names[i] = normalized;
+                if (!safeEquals(raw, normalized)) repaired = true;
+            }
+
+            if (data.messages == null || data.messages.length != messages.length) repaired = true;
+            for (int i = 0; i < messages.length; i++) {
+                String raw = data.messages != null && i < data.messages.length ? data.messages[i] : "";
+                String normalized = normalizeMessage(raw);
+                messages[i] = normalized;
+                if (!safeEquals(raw, normalized)) repaired = true;
+            }
+
+            if (data.keyCodes == null || data.keyCodes.length != keyCodes.length) repaired = true;
+            for (int i = 0; i < keyCodes.length; i++) {
+                int raw = data.keyCodes != null && i < data.keyCodes.length ? data.keyCodes[i] : -1;
+                int key = sanitizeKey(raw);
+                if (key != raw) repaired = true;
+
+                if (key >= 0) {
                     for (int j = 0; j < i; j++) {
                         if (keyCodes[j] == key) {
-                            duplicate = true;
+                            key = -1;
+                            repaired = true;
                             break;
                         }
                     }
-                    keyCodes[i] = duplicate ? -1 : key;
                 }
+                keyCodes[i] = key;
             }
 
-            // Old/manual configs could assign a CopyL slot to a global Lclient
-            // control. Runtime correctly suppresses those keys, but leaving the
-            // binding visible makes the slot appear broken. Repair it on load.
-            if (clearReservedConflicts(LClientConfig.get())) save();
+            if (clearReservedConflicts(LClientConfig.get())) repaired = true;
+            if (repaired) writeCurrentState();
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(CONFIG_PATH);
             System.err.println("[Lclient/CopyL] No se pudo leer " + CONFIG_PATH + ": " + exception.getMessage()
                     + (backup == null ? "" : " · copia: " + backup));
             resetDefaults();
-            save();
+            writeCurrentState();
         }
     }
 
@@ -167,15 +176,59 @@ public final class MessageConfig {
     }
 
     private static String normalizeMessage(String value) {
-        if (value == null) return "";
-        String cleaned = value.replace('\r', ' ').replace('\n', ' ');
-        return cleaned.length() <= MAX_MESSAGE_LENGTH ? cleaned : cleaned.substring(0, MAX_MESSAGE_LENGTH);
+        return truncateUtf16Safely(cleanSingleLine(value), MAX_MESSAGE_LENGTH);
     }
 
     private static String normalizeName(String value, int index) {
-        if (value == null || value.trim().isEmpty()) return defaultName(index);
-        String trimmed = value.trim().replace('\r', ' ').replace('\n', ' ');
-        return trimmed.length() <= MAX_NAME_LENGTH ? trimmed : trimmed.substring(0, MAX_NAME_LENGTH);
+        String cleaned = cleanSingleLine(value).trim();
+        if (cleaned.isEmpty()) return defaultName(index);
+        return truncateUtf16Safely(cleaned, MAX_NAME_LENGTH);
+    }
+
+    /**
+     * Configs can be edited outside Minecraft. Strip control characters and
+     * repair isolated UTF-16 surrogates before text reaches chat/render code.
+     */
+    private static String cleanSingleLine(String value) {
+        if (value == null || value.isEmpty()) return "";
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\r' || c == '\n' || Character.isISOControl(c)) {
+                out.append(' ');
+                continue;
+            }
+            if (Character.isHighSurrogate(c)) {
+                if (i + 1 < value.length() && Character.isLowSurrogate(value.charAt(i + 1))) {
+                    out.append(c).append(value.charAt(++i));
+                } else {
+                    out.append('?');
+                }
+                continue;
+            }
+            if (Character.isLowSurrogate(c)) {
+                out.append('?');
+                continue;
+            }
+            out.append(c);
+        }
+        return out.toString();
+    }
+
+    private static String truncateUtf16Safely(String value, int maxChars) {
+        if (value.length() <= maxChars) return value;
+        int end = maxChars;
+        if (end > 0
+                && end < value.length()
+                && Character.isHighSurrogate(value.charAt(end - 1))
+                && Character.isLowSurrogate(value.charAt(end))) {
+            end--;
+        }
+        return value.substring(0, end);
+    }
+
+    private static boolean safeEquals(String a, String b) {
+        return a == null ? b == null : a.equals(b);
     }
 
     private static String defaultName(int index) {
