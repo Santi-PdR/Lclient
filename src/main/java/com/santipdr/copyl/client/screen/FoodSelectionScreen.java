@@ -9,6 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -193,7 +194,7 @@ public final class FoodSelectionScreen extends Screen {
         }
         if (!usable) {
             ItemStack defaultStack = new ItemStack(item);
-            usable = defaultStack.isEdible() && defaultStack.getFoodProperties(eater) != null;
+            usable = defaultStack.isEdible() && safeFoodProperties(defaultStack, eater) != null;
         }
 
         if (!usable) {
@@ -204,7 +205,15 @@ public final class FoodSelectionScreen extends Screen {
     }
 
     private static boolean isUsableFoodStack(ItemStack stack, LivingEntity eater) {
-        return !stack.isEmpty() && stack.isEdible() && stack.getFoodProperties(eater) != null;
+        return !stack.isEmpty() && stack.isEdible() && safeFoodProperties(stack, eater) != null;
+    }
+
+    private static FoodProperties safeFoodProperties(ItemStack stack, LivingEntity eater) {
+        try {
+            return stack.getFoodProperties(eater);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private String displayName(String idText) {
