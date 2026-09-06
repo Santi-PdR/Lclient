@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Persistent configuration for the modules that still belong to Lclient. */
+/** Persistent configuration for Lclient's client-side modules. */
 public final class LClientConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve("lclient.json");
@@ -22,12 +22,19 @@ public final class LClientConfig {
     public boolean quickMessages = true;
 
     public boolean lootEsp = true;
+    public int lootEspToggleKey = GLFW.GLFW_KEY_X;
     public int lootEspRange = 96;
     public int lootEspMinStack = 1;
+    /** Adds a taller no-depth marker so loot remains obvious behind thick terrain. */
+    public boolean lootEspBeacon = true;
 
     public boolean smartOffhand = true;
     public int foodThreshold = 14;
     public int foodRestoreThreshold = 18;
+    /** Empty means AUTO. Otherwise this is the exact registry id to look for, e.g. minecraft:golden_carrot. */
+    public String smartOffhandFoodId = "";
+    /** When the selected food is missing, allow AUTO to choose another edible item. */
+    public boolean smartOffhandFallbackToAuto = false;
 
     public boolean recon = true;
     public int reconZoomKey = GLFW.GLFW_KEY_C;
@@ -67,6 +74,8 @@ public final class LClientConfig {
     private void sanitize() {
         lootEspRange = clamp(lootEspRange, 16, 192, 96);
         lootEspMinStack = clamp(lootEspMinStack, 1, 64, 1);
+        if (smartOffhandFoodId == null) smartOffhandFoodId = "";
+        smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(java.util.Locale.ROOT);
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
