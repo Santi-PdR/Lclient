@@ -69,12 +69,13 @@ public final class LClientConfig {
         entityAlertRange = clamp(entityAlertRange, 16, 128, 72);
         entityAlertWarmupTicks = clamp(entityAlertWarmupTicks, 20, 200, 80);
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
-        foodRestoreThreshold = clamp(foodRestoreThreshold, foodThreshold, 20, 18);
+        int minRestore = Math.min(20, foodThreshold + 1);
+        foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
     }
 
     private static int clamp(int value, int min, int max, int fallback) {
-        if (value < min || value > max) return fallback;
-        return value;
+        if (value >= min && value <= max) return value;
+        return Math.max(min, Math.min(max, fallback));
     }
 
     public synchronized void save() {
