@@ -4,12 +4,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.santipdr.copyl.CopyL;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -21,15 +23,19 @@ import java.util.List;
 /**
  * Dropped-item ESP rendered entirely by Lclient.
  *
- * It only renders ItemEntity instances already present in the client level.
- * The dedicated render type uses NO_DEPTH_TEST, so boxes and optional beacon
- * markers remain visible behind terrain without touching vanilla entity glow.
+ * Only ItemEntity instances already present in the client level are rendered.
+ * The short-lived entity cache is explicitly released on logout/disable so it
+ * can never keep an old ClientLevel alive after leaving a world or server.
  */
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class LootEspRenderer {
     private static final long SCAN_INTERVAL_MS = 100L;
 
-    private static Object cachedLevel;
+    private static final float[] COLOR_LARGE = {1.0F, 0.82F, 0.28F};
+    private static final float[] COLOR_MEDIUM = {0.45F, 0.92F, 0.72F};
+    private static final float[] COLOR_SMALL = {0.38F, 0.74F, 1.0F};
+
+    private static ClientLevel cachedLevel;
     private static List<ItemEntity> cachedItems = Collections.emptyList();
     private static long nextScanAt;
     private static int cachedRange = -1;
@@ -39,17 +45,26 @@ public final class LootEspRenderer {
     }
 
     @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        clearCache();
+    }
+
+    @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
 
         Minecraft minecraft = Minecraft.getInstance();
         LClientConfig config = LClientConfig.get();
-        if (!config.lootEsp
-                || minecraft.player == null
-                || minecraft.level == null
-                || minecraft.options.hideGui) {
+
+        if (minecraft.player == null || minecraft.level == null) {
+            clearCache();
             return;
         }
+        if (!config.lootEsp) {
+            clearCache();
+            return;
+        }
+        if (minecraft.options.hideGui) return;
 
         refreshCacheIfNeeded(minecraft, config);
         if (cachedItems.isEmpty()) return;
@@ -62,18 +77,10 @@ public final class LootEspRenderer {
         RenderType lineType = LClientRenderTypes.lootEspLines();
         VertexConsumer lines = buffers.getBuffer(lineType);
         float pulse = 0.80F + 0.20F * (float) Math.sin(System.currentTimeMillis() / 190.0D);
-        boolean drewAnything = false;
 
         for (ItemEntity item : cachedItems) {
-            if (item == null
-                    || item.isRemoved()
-                    || item.getItem().isEmpty()
-                    || item.getItem().getCount() < config.lootEspMinStack
-                    || item.distanceToSqr(minecraft.player) > rangeSq) {
-                continue;
-            }
+            if (!isRenderable(item, minecraft, config, rangeSq)) continue;
 
-            drewAnything = true;
             int count = item.getItem().getCount();
             float[] color = colorForStack(count);
 
@@ -112,7 +119,19 @@ public final class LootEspRenderer {
             }
         }
 
-        if (drewAnything) buffers.endBatch(lineType);
+        // We own this dedicated RenderType. Always close the batch once a
+        // buffer was requested, even if every cached entity became invalid
+        // between the scan and this frame.
+        buffers.endBatch(lineType);
+    }
+
+    private static boolean isRenderable(ItemEntity item, Minecraft minecraft, LClientConfig config, double rangeSq) {
+        return item != null
+                && item.level() == minecraft.level
+                && !item.isRemoved()
+                && !item.getItem().isEmpty()
+                && item.getItem().getCount() >= config.lootEspMinStack
+                && item.distanceToSqr(minecraft.player) <= rangeSq;
     }
 
     private static void refreshCacheIfNeeded(Minecraft minecraft, LClientConfig config) {
@@ -139,9 +158,17 @@ public final class LootEspRenderer {
         cachedItems = found.isEmpty() ? Collections.emptyList() : new ArrayList<>(found);
     }
 
+    public static void clearCache() {
+        cachedLevel = null;
+        cachedItems = Collections.emptyList();
+        nextScanAt = 0L;
+        cachedRange = -1;
+        cachedMinStack = -1;
+    }
+
     private static float[] colorForStack(int count) {
-        if (count >= 32) return new float[]{1.0F, 0.82F, 0.28F};
-        if (count >= 16) return new float[]{0.45F, 0.92F, 0.72F};
-        return new float[]{0.38F, 0.74F, 1.0F};
+        if (count >= 32) return COLOR_LARGE;
+        if (count >= 16) return COLOR_MEDIUM;
+        return COLOR_SMALL;
     }
 }
