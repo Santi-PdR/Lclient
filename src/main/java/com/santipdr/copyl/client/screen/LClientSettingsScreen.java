@@ -21,14 +21,17 @@ public final class LClientSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
+        int cy = height / 2;
+
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
             capturing = true;
             b.setMessage(Component.literal("PULSA UNA TECLA"));
-        }).bounds(cx - 110, height / 2 - 10, 220, 20).build());
+        }).bounds(cx - 120, cy - 18, 240, 20).build());
+
         addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> minecraft.setScreen(new LClientWheelScreen(this)))
-                .bounds(cx - 110, height / 2 + 18, 106, 20).build());
+                .bounds(cx - 120, cy + 12, 116, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Cerrar"), b -> onClose())
-                .bounds(cx + 4, height / 2 + 18, 106, 20).build());
+                .bounds(cx + 4, cy + 12, 116, 20).build());
     }
 
     private Component keyLabel() {
@@ -59,10 +62,17 @@ public final class LClientSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        graphics.drawCenteredString(font, title, width / 2, 28, 0xFFFFFFFF);
-        graphics.drawCenteredString(font, "Lclient no añade entradas a Opciones > Controles.", width / 2, 48, 0xFF9FB0C1);
-        graphics.drawCenteredString(font, "Todos los módulos, incluido CopyL, viven dentro de la misma ruleta.", width / 2, 61, 0xFF9FB0C1);
-        graphics.drawCenteredString(font, "Backspace/Delete deja la tecla global sin asignar.", width / 2, 74, 0xFF7F91A3);
+
+        int cx = width / 2;
+        int panelW = Math.min(420, width - 32);
+        graphics.fill(cx - panelW / 2, 18, cx + panelW / 2, 92, 0xB00D131A);
+        graphics.fill(cx - panelW / 2, 18, cx + panelW / 2, 20, 0xFF6FC2FF);
+
+        graphics.drawCenteredString(font, title, cx, 30, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, "La configuración global sólo controla la entrada a Lclient.", cx, 50, 0xFFB1C0CD);
+        graphics.drawCenteredString(font, "CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ se configuran desde la ruleta.", cx, 64, 0xFF8799AA);
+        graphics.drawCenteredString(font, "Lclient no añade entradas a Opciones > Controles.", cx, 78, 0xFF718596);
+
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
