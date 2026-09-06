@@ -149,10 +149,6 @@ public final class LClientWheelScreen extends Screen {
         }
     }
 
-    /**
-     * Select by normalized elliptical radius so the hit zones follow the same
-     * responsive layout used to draw the module cards.
-     */
     private Module moduleAt(double mouseX, double mouseY, int cx, int cy) {
         double rx = radiusX();
         double ry = radiusY();
@@ -228,7 +224,13 @@ public final class LClientWheelScreen extends Screen {
         ResourceLocation id = ResourceLocation.tryParse(idText);
         if (id == null) return idText;
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
-        return item == null ? idText : new ItemStack(item).getHoverName().getString();
+        if (item == null) return idText;
+        try {
+            String name = new ItemStack(item).getHoverName().getString();
+            return name == null || name.isBlank() ? idText : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return idText;
+        }
     }
 
     private boolean isEnabled(Module module) {
