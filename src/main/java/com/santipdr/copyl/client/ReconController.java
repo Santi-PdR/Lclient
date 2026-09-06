@@ -36,6 +36,7 @@ public final class ReconController {
     private static boolean waypointKeyDown;
     private static ClientLevel trackedLevel;
     private static double smoothedFov = -1.0D;
+    private static double scrollAccumulator;
     private static String statusText = "";
     private static long statusUntil;
     private static boolean zoomConfigDirty;
@@ -76,6 +77,7 @@ public final class ReconController {
         zoomActive = canUseRecon && keyDown(minecraft, config.reconZoomKey);
         if (!zoomActive) {
             smoothedFov = -1.0D;
+            scrollAccumulator = 0.0D;
             invalidateTargetCache();
         }
         if (wasZoomActive && !zoomActive) {
@@ -100,19 +102,26 @@ public final class ReconController {
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!zoomActive || event.getScrollDelta() == 0.0D) return;
+        double delta = event.getScrollDelta();
+        if (!zoomActive || delta == 0.0D) return;
+
+        // Consume the wheel while Recon is active so vanilla hotbar scrolling
+        // never competes with zoom. High-resolution wheels/trackpads often emit
+        // fractional deltas; accumulate those until a full logical step exists.
+        event.setCanceled(true);
+        scrollAccumulator += delta;
+        int steps = (int) scrollAccumulator;
+        if (steps == 0) return;
+        scrollAccumulator -= steps;
 
         LClientConfig config = LClientConfig.get();
-        int direction = event.getScrollDelta() > 0.0D ? -1 : 1;
-        int next = Mth.clamp(config.reconZoomFov + direction * 2, 8, 50);
+        int next = Mth.clamp(config.reconZoomFov - steps * 2, 8, 50);
         if (next != config.reconZoomFov) {
             config.reconZoomFov = next;
             zoomConfigDirty = true;
             zoomSaveAt = System.currentTimeMillis() + ZOOM_SAVE_DEBOUNCE_MS;
             setStatus("Zoom " + zoomText(Minecraft.getInstance(), next));
         }
-
-        event.setCanceled(true);
     }
 
     @SubscribeEvent
@@ -122,19 +131,31 @@ public final class ReconController {
             return;
         }
 
-        double target = LClientConfig.get().reconZoomFov;
-        if (smoothedFov < 0.0D) smoothedFov = event.getFOV();
+        // Recon is a zoom, never a FOV expander. This matters when the player
+        // uses a low vanilla FOV but previously saved a weaker Recon value.
+        double unzoomedFov = event.getFOV();
+        double target = Math.min(LClientConfig.get().reconZoomFov, unzoomedFov);
+        if (smoothedFov < 0.0D) smoothedFov = unzoomedFov;
         smoothedFov += (target - smoothedFov) * 0.38D;
-        event.setFOV(smoothedFov);
+        event.setFOV(Math.min(smoothedFov, unzoomedFov));
     }
 
     public static boolean isZoomActive() { return zoomActive; }
-    public static int getZoomFov() { return LClientConfig.get().reconZoomFov; }
-    public static String getZoomText() { return zoomText(Minecraft.getInstance(), LClientConfig.get().reconZoomFov); }
+
+    public static int getZoomFov() {
+        Minecraft minecraft = Minecraft.getInstance();
+        int configured = LClientConfig.get().reconZoomFov;
+        return minecraft == null ? configured : Math.min(configured, minecraft.options.fov().get());
+    }
+
+    public static String getZoomText() {
+        return zoomText(Minecraft.getInstance(), LClientConfig.get().reconZoomFov);
+    }
 
     private static String zoomText(Minecraft minecraft, int targetFov) {
         int baseFov = minecraft.options.fov().get();
-        double multiplier = Math.max(1.0D, (double) baseFov / Math.max(1, targetFov));
+        int effectiveTarget = Math.min(baseFov, Math.max(1, targetFov));
+        double multiplier = Math.max(1.0D, (double) baseFov / Math.max(1, effectiveTarget));
         return String.format(java.util.Locale.ROOT, "x%.1f", multiplier);
     }
 
@@ -294,6 +315,7 @@ public final class ReconController {
         waypointKeyDown = false;
         trackedLevel = null;
         smoothedFov = -1.0D;
+        scrollAccumulator = 0.0D;
         statusText = "";
         statusUntil = 0L;
         invalidateTargetCache();
