@@ -45,7 +45,9 @@ public final class LClientSettingsScreen extends Screen {
                 keyButton.setMessage(keyLabel());
                 return true;
             }
-            LClientConfig.get().wheelKey = keyCode;
+
+            int newKey = (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) ? -1 : keyCode;
+            LClientConfig.get().wheelKey = newKey;
             LClientConfig.get().save();
             capturing = false;
             keyButton.setMessage(keyLabel());
@@ -60,11 +62,13 @@ public final class LClientSettingsScreen extends Screen {
         graphics.drawCenteredString(font, title, width / 2, 28, 0xFFFFFFFF);
         graphics.drawCenteredString(font, "Lclient no añade entradas a Opciones > Controles.", width / 2, 48, 0xFF9FB0C1);
         graphics.drawCenteredString(font, "Todos los módulos, incluido CopyL, viven dentro de la misma ruleta.", width / 2, 61, 0xFF9FB0C1);
+        graphics.drawCenteredString(font, "Backspace/Delete deja la tecla global sin asignar.", width / 2, 74, 0xFF7F91A3);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
+        capturing = false;
         if (minecraft != null) minecraft.setScreen(parent);
     }
 }
