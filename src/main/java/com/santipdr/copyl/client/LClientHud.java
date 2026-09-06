@@ -40,8 +40,6 @@ public final class LClientHud {
 
         int screenW = minecraft.getWindow().getGuiScaledWidth();
         int screenH = minecraft.getWindow().getGuiScaledHeight();
-        // The full side panel needs enough room not to cover the central Recon
-        // frame. Compact GUIs still receive health/type info in targetText().
         if (screenW >= 520 && screenH >= 150 && hit instanceof EntityHitResult entityHit) {
             renderTargetPanel(graphics, minecraft, entityHit.getEntity());
         }
@@ -106,17 +104,21 @@ public final class LClientHud {
 
         if (hit instanceof EntityHitResult entityHit) {
             Entity entity = entityHit.getEntity();
-            StringBuilder text = new StringBuilder(entity.getName().getString())
+            StringBuilder text = new StringBuilder(ReconController.safeEntityLabel(entity))
                     .append("  ·  ")
                     .append(entity.blockPosition().toShortString())
                     .append("  ·  ")
                     .append(Math.round(distance)).append("m");
             if (entity instanceof LivingEntity living) {
-                text.append("  ·  ")
-                        .append(Math.round(living.getHealth()))
-                        .append('/')
-                        .append(Math.round(living.getMaxHealth()))
-                        .append(" HP");
+                float health = safeHealth(living);
+                float maxHealth = safeMaxHealth(living);
+                if (Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0.0F) {
+                    text.append("  ·  ")
+                            .append(Math.round(health))
+                            .append('/')
+                            .append(Math.round(maxHealth))
+                            .append(" HP");
+                }
             }
             return text.toString();
         }
@@ -127,8 +129,7 @@ public final class LClientHud {
             if (hit.getType() == HitResult.Type.MISS) {
                 return "Dirección  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
             }
-            String blockId = BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(pos).getBlock()).toString();
-            return blockId + "  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
+            return safeBlockLabel(minecraft, pos) + "  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
         }
         return "";
     }
@@ -140,13 +141,16 @@ public final class LClientHud {
         int x = Math.max(8, screenW - panelW - 8);
         int y = 10;
 
-        String title = entity.getName().getString();
-        String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        String title = ReconController.safeEntityLabel(entity);
+        String type = safeEntityType(entity);
         String distance = Math.round(minecraft.player.distanceTo(entity)) + " m";
         LivingEntity living = entity instanceof LivingEntity l ? l : null;
-        String hp = living == null ? null : Math.round(living.getHealth()) + " / " + Math.round(living.getMaxHealth()) + " HP";
+        float health = living == null ? Float.NaN : safeHealth(living);
+        float maxHealth = living == null ? Float.NaN : safeMaxHealth(living);
+        boolean validHealth = Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0.0F;
+        String hp = validHealth ? Math.round(health) + " / " + Math.round(maxHealth) + " HP" : null;
 
-        int height = living == null ? 48 : 69;
+        int height = validHealth ? 69 : 48;
         graphics.fill(x, y, x + panelW, y + height, 0xC00C1118);
         graphics.fill(x, y, x + 2, y + height, 0xFF72C5FF);
         graphics.fill(x + 2, y, x + panelW, y + 1, 0x6072C5FF);
@@ -160,15 +164,48 @@ public final class LClientHud {
         graphics.drawString(minecraft.font,
                 minecraft.font.plainSubstrByWidth(distance + "  ·  " + entity.blockPosition().toShortString(), panelW - 14),
                 x + 8, y + 33, 0xFFB8C8D7, false);
-        if (living != null) {
+        if (validHealth) {
             graphics.drawString(minecraft.font, hp, x + 8, y + 46, 0xFFE8B0B0, false);
             int barX = x + 8;
             int barY = y + 59;
             int barW = panelW - 16;
-            float healthRatio = living.getMaxHealth() <= 0.0F ? 0.0F
-                    : Mth.clamp(living.getHealth() / living.getMaxHealth(), 0.0F, 1.0F);
+            float healthRatio = Mth.clamp(health / maxHealth, 0.0F, 1.0F);
             graphics.fill(barX, barY, barX + barW, barY + 4, 0x80364141);
             graphics.fill(barX, barY, barX + Math.round(barW * healthRatio), barY + 4, 0xD8E07B7B);
+        }
+    }
+
+    private static String safeEntityType(Entity entity) {
+        try {
+            var id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            return id == null ? "entity" : id.toString();
+        } catch (RuntimeException | LinkageError ignored) {
+            return "entity";
+        }
+    }
+
+    private static String safeBlockLabel(Minecraft minecraft, net.minecraft.core.BlockPos pos) {
+        try {
+            var id = BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(pos).getBlock());
+            return id == null ? "block" : id.toString();
+        } catch (RuntimeException | LinkageError ignored) {
+            return "block";
+        }
+    }
+
+    private static float safeHealth(LivingEntity living) {
+        try {
+            return living.getHealth();
+        } catch (RuntimeException | LinkageError ignored) {
+            return Float.NaN;
+        }
+    }
+
+    private static float safeMaxHealth(LivingEntity living) {
+        try {
+            return living.getMaxHealth();
+        } catch (RuntimeException | LinkageError ignored) {
+            return Float.NaN;
         }
     }
 
