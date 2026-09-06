@@ -10,18 +10,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
-/**
- * JourneyMap 5.10.x plugin.
- *
- * IMPORTANT: nothing outside this package should directly reference this class.
- * JourneyMap 5.10.3 bundles API 1.20-1.9-SNAPSHOT, and loading this class when
- * JourneyMap is absent would otherwise cause a classloader failure. Use
- * JourneyMapBridge from the rest of Lclient.
- */
+/** JourneyMap 5.10.x / API 1.9 plugin used only for Recon waypoints. */
 @journeymap.client.api.ClientPlugin
 public final class LClientJourneyMapPlugin implements IClientPlugin {
     private static IClientAPI api;
-    private static Waypoint lastAttacker;
     private static Waypoint lastRecon;
 
     @Override
@@ -36,7 +28,6 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
 
     @Override
     public void onEvent(ClientEvent event) {
-        // No subscriptions are required for Lclient's tactical waypoints.
     }
 
     public static boolean isReady() {
@@ -45,23 +36,6 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
             return api.playerAccepts(CopyL.MOD_ID, DisplayType.Waypoint);
         } catch (Throwable ignored) {
             return false;
-        }
-    }
-
-    public static void markAttacker(BlockPos pos, String name, ResourceKey<Level> dimension) {
-        if (!isReady()) return;
-        try {
-            if (lastAttacker != null) api.remove(lastAttacker);
-            lastAttacker = new Waypoint(
-                    CopyL.MOD_ID,
-                    "lclient_last_attacker",
-                    "Último atacante: " + name,
-                    dimension,
-                    pos
-            ).setColor(0xE34B4B).setPersistent(false).setEditable(false);
-            api.show(lastAttacker);
-        } catch (Throwable ignored) {
-            lastAttacker = null;
         }
     }
 
@@ -85,11 +59,9 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
     public static void clearTacticalWaypoints() {
         if (api == null) return;
         try {
-            if (lastAttacker != null) api.remove(lastAttacker);
             if (lastRecon != null) api.remove(lastRecon);
         } catch (Throwable ignored) {
         } finally {
-            lastAttacker = null;
             lastRecon = null;
         }
     }
