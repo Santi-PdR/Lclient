@@ -25,18 +25,25 @@ public final class LClientSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        int cy = height / 2;
+        boolean compact = height < 220;
+        int buttonWidth = Math.min(240, Math.max(180, width - 24));
+        int top = compact ? 66 : height / 2 - 18;
+        int buttonHeight = compact ? 18 : 20;
 
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
             capturing = true;
             warning = "";
             b.setMessage(Component.literal("PULSA UNA TECLA"));
-        }).bounds(cx - 120, cy - 18, 240, 20).build());
+        }).bounds(cx - buttonWidth / 2, top, buttonWidth, buttonHeight).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> minecraft.setScreen(new LClientWheelScreen(this)))
-                .bounds(cx - 120, cy + 12, 116, 20).build());
+        int gap = 8;
+        int half = (buttonWidth - gap) / 2;
+        addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> {
+                    if (minecraft != null) minecraft.setScreen(new LClientWheelScreen(this));
+                })
+                .bounds(cx - buttonWidth / 2, top + buttonHeight + 10, half, buttonHeight).build());
         addRenderableWidget(Button.builder(Component.literal("Cerrar"), b -> onClose())
-                .bounds(cx + 4, cy + 12, 116, 20).build());
+                .bounds(cx - buttonWidth / 2 + half + gap, top + buttonHeight + 10, half, buttonHeight).build());
     }
 
     private Component keyLabel() {
@@ -64,8 +71,9 @@ public final class LClientSettingsScreen extends Screen {
             }
 
             if (newKey >= 0) clearCopyLConflict(newKey);
-            LClientConfig.get().wheelKey = newKey;
-            LClientConfig.get().save();
+            LClientConfig config = LClientConfig.get();
+            config.wheelKey = newKey;
+            config.save();
             capturing = false;
             keyButton.setMessage(keyLabel());
             return true;
@@ -97,17 +105,41 @@ public final class LClientSettingsScreen extends Screen {
         renderBackground(graphics);
 
         int cx = width / 2;
-        int panelW = Math.min(440, width - 32);
-        graphics.fill(cx - panelW / 2, 18, cx + panelW / 2, 96, 0xB00D131A);
-        graphics.fill(cx - panelW / 2, 18, cx + panelW / 2, 20, 0xFF6FC2FF);
+        boolean compact = height < 220;
+        int panelW = Math.min(440, Math.max(180, width - 24));
+        int panelTop = compact ? 8 : 18;
+        int panelBottom = compact ? 56 : 96;
+        graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelBottom, 0xB00D131A);
+        graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelTop + 2, 0xFF6FC2FF);
 
-        graphics.drawCenteredString(font, title, cx, 30, 0xFFFFFFFF);
-        graphics.drawCenteredString(font, "La configuración global controla la entrada a Lclient.", cx, 50, 0xFFB1C0CD);
-        graphics.drawCenteredString(font, "CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ viven dentro de la ruleta.", cx, 64, 0xFF8799AA);
-        graphics.drawCenteredString(font, "Las teclas reservadas se protegen para evitar dobles acciones accidentales.", cx, 78, 0xFF718596);
+        graphics.drawCenteredString(font, title, cx, panelTop + 10, 0xFFFFFFFF);
+        int maxTextWidth = Math.max(160, panelW - 14);
+        if (compact) {
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth("Configura la entrada a Lclient; el resto vive dentro de la ruleta.", maxTextWidth),
+                    cx,
+                    panelTop + 27,
+                    0xFF9FB1C0);
+        } else {
+            graphics.drawCenteredString(font, "La configuración global controla la entrada a Lclient.", cx, 50, 0xFFB1C0CD);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth("CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ viven dentro de la ruleta.", maxTextWidth),
+                    cx,
+                    64,
+                    0xFF8799AA);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth("Las teclas reservadas se protegen para evitar dobles acciones accidentales.", maxTextWidth),
+                    cx,
+                    78,
+                    0xFF718596);
+        }
 
         if (!warning.isBlank() && System.currentTimeMillis() <= warningUntil) {
-            graphics.drawCenteredString(font, warning, cx, height - 18, 0xFFFFB28A);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth(warning, Math.max(160, width - 20)),
+                    cx,
+                    height - 10,
+                    0xFFFFB28A);
         }
         super.render(graphics, mouseX, mouseY, partialTick);
     }
