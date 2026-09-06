@@ -1,6 +1,7 @@
 package com.santipdr.copyl.client.screen;
 
 import com.santipdr.copyl.client.LClientConfig;
+import com.santipdr.copyl.client.LClientHud;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -8,12 +9,12 @@ import net.minecraft.network.chat.Component;
 public final class LClientWheelScreen extends Screen {
     public enum Module {
         COPYL("CopyL", "Mensajes rápidos"),
-        SOUND_RADAR("Sound Radar", "Dirección, altura y distancia de sonidos"),
+        SOUND_RADAR("Sound Radar", "Indicadores direccionales alrededor de la mira"),
         LOOT_ESP("Loot ESP", "Resalta objetos tirados sin romper glow ajeno"),
-        COMBAT("Combat + Notificaciones", "Objetivo, daño, atacante y coordenadas"),
+        COMBAT("Combat + Notificaciones", "Historial de avisos y eventos de combate"),
         SMART_OFFHAND("Smart Offhand", "Comida temporal con restauración segura"),
         ENTITY_ALERTS("Entity Alerts", "Detecta apariciones en zonas ya cargadas"),
-        RECON("Advanced Recon", "Coordenadas y marcado táctico"),
+        RECON("Advanced Recon", "Zoom táctico + waypoint independiente"),
         JOURNEYMAP("JourneyMap+", "Waypoints tácticos compatibles con 5.10.x");
 
         public final String title;
@@ -60,8 +61,12 @@ public final class LClientWheelScreen extends Screen {
         } else {
             boolean enabled = isEnabled(selected);
             graphics.drawCenteredString(font, selected.title, cx, cy + 3, 0xFF8CCBFF);
-            graphics.drawCenteredString(font, enabled ? "ACTIVADO" : "DESACTIVADO", cx, cy + 16,
-                    enabled ? 0xFF93E6A3 : 0xFF9AA4AE);
+            if (selected == Module.COMBAT && LClientHud.getUnreadCenterCount() > 0) {
+                graphics.drawCenteredString(font, LClientHud.getUnreadCenterCount() + " NUEVAS", cx, cy + 16, 0xFFFFC980);
+            } else {
+                graphics.drawCenteredString(font, enabled ? "ACTIVADO" : "DESACTIVADO", cx, cy + 16,
+                        enabled ? 0xFF93E6A3 : 0xFF9AA4AE);
+            }
         }
 
         Module[] modules = Module.values();
@@ -82,11 +87,24 @@ public final class LClientWheelScreen extends Screen {
                     enabled ? 0xFF70D982 : 0xFF68717A);
             graphics.drawCenteredString(font, module.title, x + 3, y - 4,
                     active ? 0xFFFFFFFF : enabled ? 0xFFD5DEE7 : 0xFF86909A);
+
+            if (module == Module.COMBAT) {
+                int unread = LClientHud.getUnreadCenterCount();
+                if (unread > 0) {
+                    String badge = unread > 99 ? "99+" : Integer.toString(unread);
+                    int badgeW = Math.max(12, font.width(badge) + 6);
+                    graphics.fill(x + cardW / 2 - badgeW, y - 13, x + cardW / 2, y - 1, 0xFFF08A65);
+                    graphics.drawCenteredString(font, badge, x + cardW / 2 - badgeW / 2, y - 11, 0xFFFFFFFF);
+                }
+            }
         }
 
         if (selected != null) {
             graphics.drawCenteredString(font, selected.subtitle, cx, height - 31, 0xFFC2CDD7);
-            graphics.drawCenteredString(font, "Click izquierdo: configurar", cx, height - 17, 0xFF7F91A3);
+            String action = selected == Module.COMBAT
+                    ? "Click izquierdo: abrir centro"
+                    : "Click izquierdo: configurar";
+            graphics.drawCenteredString(font, action, cx, height - 17, 0xFF7F91A3);
         } else {
             graphics.drawCenteredString(font, "Esc: cerrar", cx, height - 17, 0xFF71808E);
         }
@@ -119,6 +137,8 @@ public final class LClientWheelScreen extends Screen {
         if (button == 0 && selected != null && minecraft != null) {
             if (selected == Module.COPYL) {
                 minecraft.setScreen(new MessageEditorScreen(this));
+            } else if (selected == Module.COMBAT) {
+                minecraft.setScreen(new NotificationCenterScreen(this));
             } else {
                 minecraft.setScreen(new ModuleSettingsScreen(this, selected));
             }
