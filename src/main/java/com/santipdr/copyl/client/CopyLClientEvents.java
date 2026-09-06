@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.CopyL;
 import com.santipdr.copyl.client.screen.LClientWheelScreen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.ClickType;
@@ -17,6 +19,7 @@ import net.minecraftforge.fml.common.Mod;
 public final class CopyLClientEvents {
     private static final boolean[] messageKeyDown = new boolean[CopyLKeyMappings.SLOT_COUNT];
     private static boolean wheelKeyDown;
+    private static boolean lootEspToggleKeyDown;
 
     private static int smartFoodSourceSlot = -1;
     private static boolean smartOffhandActive;
@@ -34,6 +37,7 @@ public final class CopyLClientEvents {
         LClientConfig config = LClientConfig.get();
 
         pollWheelKey(minecraft, config);
+        pollLootEspToggle(minecraft, config);
         pollQuickMessages(minecraft, config);
 
         if (minecraft.player == null || minecraft.level == null) {
@@ -52,6 +56,18 @@ public final class CopyLClientEvents {
         wheelKeyDown = down;
     }
 
+    private static void pollLootEspToggle(Minecraft minecraft, LClientConfig config) {
+        boolean down = keyDown(minecraft, config.lootEspToggleKey);
+        if (down && !lootEspToggleKeyDown
+                && minecraft.screen == null
+                && minecraft.player != null
+                && minecraft.level != null) {
+            config.lootEsp = !config.lootEsp;
+            config.save();
+        }
+        lootEspToggleKeyDown = down;
+    }
+
     private static void pollQuickMessages(Minecraft minecraft, LClientConfig config) {
         if (!config.quickMessages || minecraft.player == null || minecraft.player.connection == null || minecraft.screen != null) {
             for (int i = 0; i < messageKeyDown.length; i++) messageKeyDown[i] = false;
@@ -61,21 +77,44 @@ public final class CopyLClientEvents {
         MessageConfig messages = MessageConfig.getInstance();
         for (int i = 0; i < messageKeyDown.length; i++) {
             int key = messages.getKeyCode(i);
-            boolean down = key >= 0 && keyDown(minecraft, key);
+            boolean reserved = isReservedLclientKey(key, config);
+            boolean down = key >= 0 && !reserved && keyDown(minecraft, key);
             if (down && !messageKeyDown[i]) sendSlot(minecraft, i);
             messageKeyDown[i] = down;
         }
+    }
+
+    private static boolean isReservedLclientKey(int key, LClientConfig config) {
+        if (key < 0) return false;
+        return key == config.wheelKey
+                || key == config.lootEspToggleKey
+                || key == config.reconZoomKey
+                || key == config.reconWaypointKey;
     }
 
     private static void sendSlot(Minecraft minecraft, int slot) {
         String message = MessageConfig.getInstance().getMessage(slot);
         if (message.isBlank()) return;
 
+        message = expandQuickMessage(message, minecraft.player);
         if (message.startsWith("/") && message.length() > 1) {
             minecraft.player.connection.sendCommand(message.substring(1));
         } else {
             minecraft.player.connection.sendChat(message);
         }
+    }
+
+    private static String expandQuickMessage(String message, Player player) {
+        String dimension = player.level().dimension().location().toString();
+        return message
+                .replace("{x}", Integer.toString(player.blockPosition().getX()))
+                .replace("{y}", Integer.toString(player.blockPosition().getY()))
+                .replace("{z}", Integer.toString(player.blockPosition().getZ()))
+                .replace("{pos}", player.blockPosition().toShortString())
+                .replace("{dim}", dimension)
+                .replace("{hp}", Integer.toString(Math.round(player.getHealth())))
+                .replace("{food}", Integer.toString(player.getFoodData().getFoodLevel()))
+                .replace("{name}", player.getGameProfile().getName());
     }
 
     private static void handleSmartOffhand(Minecraft minecraft, LClientConfig config) {
@@ -89,9 +128,9 @@ public final class CopyLClientEvents {
 
         int foodLevel = player.getFoodData().getFoodLevel();
         if (!smartOffhandActive) {
-            if (foodLevel > config.foodThreshold || player.getOffhandItem().isEdible()) return;
+            if (foodLevel > config.foodThreshold || player.getOffhandItem().isEdible() || player.isUsingItem()) return;
 
-            int source = findBestFoodSlot(player);
+            int source = findFoodSlot(player, config);
             if (source < 0) return;
 
             ItemStack original = player.getOffhandItem().copy();
@@ -150,7 +189,36 @@ public final class CopyLClientEvents {
         return !sourceStack.isEmpty() && ItemStack.isSameItemSameTags(sourceStack, smartOriginalOffhand);
     }
 
-    private static int findBestFoodSlot(Player player) {
+    private static int findFoodSlot(Player player, LClientConfig config) {
+        String preferredId = config.smartOffhandFoodId == null ? "" : config.smartOffhandFoodId.trim();
+        if (!preferredId.isEmpty()) {
+            int selected = findPreferredFoodSlot(player, preferredId);
+            if (selected >= 0) return selected;
+            if (!config.smartOffhandFallbackToAuto) return -1;
+        }
+        return findBestAutoFoodSlot(player);
+    }
+
+    private static int findPreferredFoodSlot(Player player, String preferredId) {
+        ResourceLocation wanted = ResourceLocation.tryParse(preferredId);
+        if (wanted == null) return -1;
+
+        int bestSlot = -1;
+        int bestCount = -1;
+        for (int i = 0; i < 36; i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (stack.isEmpty() || !stack.isEdible()) continue;
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (!wanted.equals(id)) continue;
+            if (stack.getCount() > bestCount) {
+                bestCount = stack.getCount();
+                bestSlot = i;
+            }
+        }
+        return bestSlot;
+    }
+
+    private static int findBestAutoFoodSlot(Player player) {
         int bestSlot = -1;
         float bestScore = -1.0F;
 
@@ -159,8 +227,12 @@ public final class CopyLClientEvents {
             if (stack.isEmpty() || !stack.isEdible()) continue;
 
             FoodProperties food = stack.getItem().getFoodProperties();
-            float score = stack.getCount();
-            if (food != null) score += food.getNutrition() * 20.0F;
+            float score = Math.min(stack.getCount(), 16) * 0.45F;
+            if (food != null) {
+                score += food.getNutrition() * 3.0F;
+                score += food.getSaturationModifier() * food.getNutrition() * 2.0F;
+                if (food.isFastFood()) score += 0.5F;
+            }
 
             if (score > bestScore) {
                 bestScore = score;
