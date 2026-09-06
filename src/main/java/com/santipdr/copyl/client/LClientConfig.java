@@ -31,9 +31,12 @@ public final class LClientConfig {
     public int soundRadarRange = 72;
     public int lootEspRange = 64;
     public int entityAlertRange = 72;
+    public int entityAlertWarmupTicks = 80;
     public int foodThreshold = 14;
     public int foodRestoreThreshold = 18;
+
     public boolean journeyMapAttackerWaypoint = true;
+    public boolean journeyMapReconWaypoint = true;
 
     public static synchronized LClientConfig get() {
         if (instance == null) {
@@ -43,21 +46,40 @@ public final class LClientConfig {
     }
 
     private static LClientConfig load() {
+        LClientConfig config;
         if (!Files.exists(PATH)) {
-            LClientConfig config = new LClientConfig();
+            config = new LClientConfig();
             config.save();
             return config;
         }
         try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
-            LClientConfig config = GSON.fromJson(reader, LClientConfig.class);
-            return config == null ? new LClientConfig() : config;
+            config = GSON.fromJson(reader, LClientConfig.class);
+            if (config == null) config = new LClientConfig();
         } catch (Exception exception) {
             System.err.println("[Lclient] No se pudo leer " + PATH + ": " + exception.getMessage());
-            return new LClientConfig();
+            config = new LClientConfig();
         }
+        config.sanitize();
+        return config;
+    }
+
+    private void sanitize() {
+        soundRadarRange = clamp(soundRadarRange, 24, 160, 72);
+        lootEspRange = clamp(lootEspRange, 16, 160, 64);
+        entityAlertRange = clamp(entityAlertRange, 16, 128, 72);
+        entityAlertWarmupTicks = clamp(entityAlertWarmupTicks, 20, 200, 80);
+        foodThreshold = clamp(foodThreshold, 1, 19, 14);
+        int minRestore = Math.min(20, foodThreshold + 1);
+        foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
+    }
+
+    private static int clamp(int value, int min, int max, int fallback) {
+        if (value >= min && value <= max) return value;
+        return Math.max(min, Math.min(max, fallback));
     }
 
     public synchronized void save() {
+        sanitize();
         try {
             Files.createDirectories(PATH.getParent());
             try (Writer writer = Files.newBufferedWriter(PATH, StandardCharsets.UTF_8)) {
