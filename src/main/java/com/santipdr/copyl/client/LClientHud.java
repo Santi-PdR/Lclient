@@ -5,6 +5,7 @@ import com.santipdr.copyl.CopyL;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.BlockHitResult;
@@ -53,7 +54,6 @@ public final class LClientHud {
         int accent = 0xD8B9D8FF;
         int soft = 0x806B8299;
 
-        // Four optic brackets.
         graphics.fill(cx - halfW, cy - halfH, cx - halfW + arm, cy - halfH + 1, accent);
         graphics.fill(cx - halfW, cy - halfH, cx - halfW + 1, cy - halfH + arm, accent);
         graphics.fill(cx + halfW - arm, cy - halfH, cx + halfW, cy - halfH + 1, accent);
@@ -63,7 +63,6 @@ public final class LClientHud {
         graphics.fill(cx + halfW - arm, cy + halfH - 1, cx + halfW, cy + halfH, accent);
         graphics.fill(cx + halfW - 1, cy + halfH - arm, cx + halfW, cy + halfH, accent);
 
-        // Fine central reticle.
         graphics.fill(cx - 8, cy, cx - 2, cy + 1, soft);
         graphics.fill(cx + 3, cy, cx + 9, cy + 1, soft);
         graphics.fill(cx, cy - 8, cx + 1, cy - 2, soft);
@@ -77,7 +76,7 @@ public final class LClientHud {
 
         String target = targetText(minecraft, hit);
         if (!target.isBlank()) {
-            int maxWidth = Math.min(360, screenW - 40);
+            int maxWidth = Math.min(390, screenW - 40);
             target = minecraft.font.plainSubstrByWidth(target, maxWidth);
             graphics.drawCenteredString(minecraft.font, target, cx, cy + halfH + 8, 0xFFE4EEF8);
         }
@@ -105,27 +104,28 @@ public final class LClientHud {
         if (hit instanceof BlockHitResult blockHit) {
             var pos = ReconController.targetBlockPos(blockHit);
             if (pos == null) return "";
-            String prefix = hit.getType() == HitResult.Type.MISS ? "Dirección" : "Bloque";
-            return prefix + "  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
+            if (hit.getType() == HitResult.Type.MISS) {
+                return "Dirección  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
+            }
+            String blockId = BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(pos).getBlock()).toString();
+            return blockId + "  ·  " + pos.toShortString() + "  ·  " + Math.round(distance) + "m";
         }
         return "";
     }
 
     private static void renderTargetPanel(GuiGraphics graphics, Minecraft minecraft, Entity entity) {
         int screenW = minecraft.getWindow().getGuiScaledWidth();
-        int panelW = Math.min(218, Math.max(166, screenW / 5));
+        int panelW = Math.min(226, Math.max(174, screenW / 5));
         int x = screenW - panelW - 12;
         int y = 14;
 
         String title = entity.getName().getString();
         String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         String distance = Math.round(minecraft.player.distanceTo(entity)) + " m";
-        String hp = null;
-        if (entity instanceof LivingEntity living) {
-            hp = Math.round(living.getHealth()) + " / " + Math.round(living.getMaxHealth()) + " HP";
-        }
+        LivingEntity living = entity instanceof LivingEntity l ? l : null;
+        String hp = living == null ? null : Math.round(living.getHealth()) + " / " + Math.round(living.getMaxHealth()) + " HP";
 
-        int height = hp == null ? 48 : 60;
+        int height = living == null ? 48 : 69;
         graphics.fill(x, y, x + panelW, y + height, 0xC00C1118);
         graphics.fill(x, y, x + 2, y + height, 0xFF72C5FF);
         graphics.fill(x + 2, y, x + panelW, y + 1, 0x6072C5FF);
@@ -139,8 +139,15 @@ public final class LClientHud {
         graphics.drawString(minecraft.font,
                 distance + "  ·  " + entity.blockPosition().toShortString(),
                 x + 8, y + 33, 0xFFB8C8D7, false);
-        if (hp != null) {
-            graphics.drawString(minecraft.font, hp, x + 8, y + 46, 0xFFE8A7A7, false);
+        if (living != null) {
+            graphics.drawString(minecraft.font, hp, x + 8, y + 46, 0xFFE8B0B0, false);
+            int barX = x + 8;
+            int barY = y + 59;
+            int barW = panelW - 16;
+            float healthRatio = living.getMaxHealth() <= 0.0F ? 0.0F
+                    : Mth.clamp(living.getHealth() / living.getMaxHealth(), 0.0F, 1.0F);
+            graphics.fill(barX, barY, barX + barW, barY + 4, 0x80364141);
+            graphics.fill(barX, barY, barX + Math.round(barW * healthRatio), barY + 4, 0xD8E07B7B);
         }
     }
 
