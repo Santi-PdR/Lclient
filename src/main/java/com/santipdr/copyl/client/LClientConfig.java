@@ -17,7 +17,15 @@ public final class LClientConfig {
     private static LClientConfig instance;
 
     public int wheelKey = GLFW.GLFW_KEY_RIGHT_ALT;
-    public int reconMarkKey = GLFW.GLFW_KEY_V;
+
+    // Advanced Recon is intentionally configured inside the Lclient wheel.
+    public int reconZoomKey = GLFW.GLFW_KEY_C;
+    public int reconWaypointKey = GLFW.GLFW_KEY_V;
+    public int reconZoomFov = 24;
+
+    // Kept only so old 2.1 configs deserialize safely. It is migrated to reconWaypointKey.
+    @Deprecated
+    public int reconMarkKey = -1;
 
     public boolean quickMessages = true;
     public boolean soundRadar = true;
@@ -29,6 +37,7 @@ public final class LClientConfig {
     public boolean journeyMap = true;
 
     public int soundRadarRange = 72;
+    public boolean soundRadarIgnoreSelf = true;
     public int lootEspRange = 64;
     public int entityAlertRange = 72;
     public int entityAlertWarmupTicks = 80;
@@ -64,10 +73,17 @@ public final class LClientConfig {
     }
 
     private void sanitize() {
+        // Lclient 2.1 only had reconMarkKey. Preserve that user's key as the waypoint key.
+        if (reconMarkKey >= 0) {
+            reconWaypointKey = reconMarkKey;
+            reconMarkKey = -1;
+        }
+
         soundRadarRange = clamp(soundRadarRange, 24, 160, 72);
         lootEspRange = clamp(lootEspRange, 16, 160, 64);
         entityAlertRange = clamp(entityAlertRange, 16, 128, 72);
         entityAlertWarmupTicks = clamp(entityAlertWarmupTicks, 20, 200, 80);
+        reconZoomFov = clamp(reconZoomFov, 10, 50, 24);
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
