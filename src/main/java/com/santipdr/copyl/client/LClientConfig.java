@@ -2,6 +2,7 @@ package com.santipdr.copyl.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.lwjgl.glfw.GLFW;
 
@@ -62,7 +63,15 @@ public final class LClientConfig {
         try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
             LClientConfig config = GSON.fromJson(reader, LClientConfig.class);
             if (config == null) throw new IllegalStateException("config vacía");
+
+            String before = GSON.toJson(config);
             config.sanitize();
+            String after = GSON.toJson(config);
+            if (!before.equals(after)) {
+                // Persist migrations/repairs once instead of re-fixing the same
+                // invalid values on every Minecraft start.
+                AtomicConfigIO.write(PATH, after);
+            }
             return config;
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(PATH);
@@ -80,9 +89,6 @@ public final class LClientConfig {
         reconZoomKey = sanitizeKey(reconZoomKey, GLFW.GLFW_KEY_C);
         reconWaypointKey = sanitizeKey(reconWaypointKey, GLFW.GLFW_KEY_V);
 
-        // Never let two global Lclient actions share a key after loading an
-        // old/corrupted config. The earlier action keeps the key; the later
-        // one becomes unassigned and can be rebound from the wheel.
         if (lootEspToggleKey >= 0 && lootEspToggleKey == wheelKey) lootEspToggleKey = -1;
         if (reconZoomKey >= 0 && (reconZoomKey == wheelKey || reconZoomKey == lootEspToggleKey)) reconZoomKey = -1;
         if (reconWaypointKey >= 0 && (reconWaypointKey == wheelKey
@@ -97,6 +103,9 @@ public final class LClientConfig {
         if (smartOffhandFoodId == null) smartOffhandFoodId = "";
         smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(Locale.ROOT);
         if (smartOffhandFoodId.length() > 128) smartOffhandFoodId = smartOffhandFoodId.substring(0, 128);
+        if (!smartOffhandFoodId.isEmpty() && ResourceLocation.tryParse(smartOffhandFoodId) == null) {
+            smartOffhandFoodId = "";
+        }
 
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
