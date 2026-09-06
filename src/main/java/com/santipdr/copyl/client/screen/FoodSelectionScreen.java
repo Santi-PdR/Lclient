@@ -8,6 +8,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -19,7 +21,8 @@ import java.util.Map;
 
 /** Picker for Smart Offhand's preferred edible item. */
 public final class FoodSelectionScreen extends Screen {
-    private static final int PAGE_SIZE = 8;
+    private static final int FULL_PAGE_SIZE = 8;
+    private static final int COMPACT_PAGE_SIZE = 4;
 
     private final Screen parent;
     private final List<FoodChoice> foods = new ArrayList<>();
@@ -41,11 +44,14 @@ public final class FoodSelectionScreen extends Screen {
     @Override
     protected void init() {
         rebuildFoods();
-        int maxPage = foods.isEmpty() ? 0 : (foods.size() - 1) / PAGE_SIZE;
+        int pageSize = pageSize();
+        int maxPage = foods.isEmpty() ? 0 : (foods.size() - 1) / pageSize;
         page = Math.min(page, maxPage);
 
         int cx = width / 2;
-        int startY = 58;
+        int startY = Math.max(48, Math.min(58, height / 4));
+        int buttonWidth = Math.min(300, Math.max(220, width - 28));
+        int left = cx - buttonWidth / 2;
 
         addRenderableWidget(Button.builder(Component.literal("AUTO · elegir automáticamente"), b -> {
             LClientConfig config = LClientConfig.get();
@@ -53,32 +59,36 @@ public final class FoodSelectionScreen extends Screen {
             config.save();
             feedback = "Selección: AUTO";
             rebuildScreen();
-        }).bounds(cx - 150, startY, 300, 20).build());
+        }).bounds(left, startY, buttonWidth, 20).build());
 
-        int from = page * PAGE_SIZE;
-        int to = Math.min(foods.size(), from + PAGE_SIZE);
+        int from = page * pageSize;
+        int to = Math.min(foods.size(), from + pageSize);
+        int gap = 8;
+        int columnWidth = (buttonWidth - gap) / 2;
+        int rows = (pageSize + 1) / 2;
         for (int i = from; i < to; i++) {
             FoodChoice choice = foods.get(i);
             int local = i - from;
             int column = local % 2;
             int row = local / 2;
-            int x = cx - 150 + column * 154;
+            int x = left + column * (columnWidth + gap);
             int y = startY + 29 + row * 26;
             boolean selected = choice.id.equals(LClientConfig.get().smartOffhandFoodId);
             String prefix = selected ? "✓ " : "";
-            String label = prefix + choice.name + " · x" + choice.count;
+            String rawLabel = prefix + choice.name + " · x" + choice.count;
+            String label = font.plainSubstrByWidth(rawLabel, columnWidth - 10);
             addRenderableWidget(Button.builder(Component.literal(label), b -> select(choice.id))
-                    .bounds(x, y, 146, 20).build());
+                    .bounds(x, y, columnWidth, 20).build());
         }
 
-        int pagerY = startY + 29 + 4 * 26 + 2;
+        int pagerY = startY + 29 + rows * 26 + 2;
         addRenderableWidget(Button.builder(Component.literal("◀"), b -> {
             if (page > 0) {
                 page--;
                 feedback = "";
                 rebuildScreen();
             }
-        }).bounds(cx - 150, pagerY, 46, 20).build()).active = page > 0;
+        }).bounds(left, pagerY, 46, 20).build()).active = page > 0;
 
         addRenderableWidget(Button.builder(Component.literal("▶"), b -> {
             if (page < maxPage) {
@@ -86,21 +96,26 @@ public final class FoodSelectionScreen extends Screen {
                 feedback = "";
                 rebuildScreen();
             }
-        }).bounds(cx + 104, pagerY, 46, 20).build()).active = page < maxPage;
+        }).bounds(left + buttonWidth - 46, pagerY, 46, 20).build()).active = page < maxPage;
 
-        idField = new EditBox(font, cx - 150, pagerY + 31, 214, 20, Component.literal("ID de comida"));
+        int idButtonWidth = 80;
+        idField = new EditBox(font, left, pagerY + 31, buttonWidth - idButtonWidth - 6, 20, Component.literal("ID de comida"));
         idField.setMaxLength(128);
         idField.setHint(Component.literal("minecraft:golden_carrot"));
         idField.setValue(LClientConfig.get().smartOffhandFoodId);
         addRenderableWidget(idField);
 
         addRenderableWidget(Button.builder(Component.literal("Aplicar ID"), b -> applyManualId())
-                .bounds(cx + 70, pagerY + 31, 80, 20).build());
+                .bounds(left + buttonWidth - idButtonWidth, pagerY + 31, idButtonWidth, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Usar mano principal"), b -> selectMainHand())
-                .bounds(cx - 150, pagerY + 58, 146, 20).build());
+                .bounds(left, pagerY + 58, columnWidth, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose())
-                .bounds(cx + 4, pagerY + 58, 146, 20).build());
+                .bounds(left + columnWidth + gap, pagerY + 58, columnWidth, 20).build());
+    }
+
+    private int pageSize() {
+        return height < 300 ? COMPACT_PAGE_SIZE : FULL_PAGE_SIZE;
     }
 
     private void rebuildFoods() {
@@ -110,12 +125,12 @@ public final class FoodSelectionScreen extends Screen {
         Map<ResourceLocation, FoodChoice> unique = new LinkedHashMap<>();
         for (int slot = 0; slot < 36; slot++) {
             ItemStack stack = minecraft.player.getInventory().getItem(slot);
-            if (stack.isEmpty() || !stack.isEdible()) continue;
+            if (!isUsableFoodStack(stack, minecraft.player)) continue;
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (id == null) continue;
             FoodChoice existing = unique.get(id);
             if (existing == null) {
-                unique.put(id, new FoodChoice(id.toString(), stack.getHoverName().getString(), stack.getCount()));
+                unique.put(id, new FoodChoice(id.toString(), safeStackName(stack, id), stack.getCount()));
             } else {
                 existing.count += stack.getCount();
             }
@@ -140,8 +155,8 @@ public final class FoodSelectionScreen extends Screen {
     private void selectMainHand() {
         if (minecraft == null || minecraft.player == null) return;
         ItemStack stack = minecraft.player.getMainHandItem();
-        if (stack.isEmpty() || !stack.isEdible()) {
-            feedback = "El item de tu mano principal no es comida.";
+        if (!isUsableFoodStack(stack, minecraft.player)) {
+            feedback = "El item de tu mano principal no es una comida utilizable.";
             return;
         }
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
@@ -161,11 +176,60 @@ public final class FoodSelectionScreen extends Screen {
             return;
         }
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
-        if (item == null || !new ItemStack(item).isEdible()) {
-            feedback = "Ese ID no corresponde a una comida cargada.";
+        if (item == null) {
+            feedback = "Ese ID no corresponde a un item cargado.";
+            return;
+        }
+
+        LivingEntity eater = minecraft == null ? null : minecraft.player;
+        boolean usable = false;
+        if (minecraft != null && minecraft.player != null) {
+            for (int slot = 0; slot < 36; slot++) {
+                ItemStack stack = minecraft.player.getInventory().getItem(slot);
+                if (stack.getItem() == item && isUsableFoodStack(stack, minecraft.player)) {
+                    usable = true;
+                    break;
+                }
+            }
+        }
+        if (!usable) {
+            ItemStack defaultStack = new ItemStack(item);
+            usable = isUsableFoodStack(defaultStack, eater);
+        }
+
+        if (!usable) {
+            feedback = "Ese ID no tiene propiedades de comida válidas para Smart Offhand.";
             return;
         }
         select(id.toString());
+    }
+
+    private static boolean isUsableFoodStack(ItemStack stack, LivingEntity eater) {
+        try {
+            return stack != null
+                    && !stack.isEmpty()
+                    && stack.isEdible()
+                    && stack.getFoodProperties(eater) != null;
+        } catch (RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    private static FoodProperties safeFoodProperties(ItemStack stack, LivingEntity eater) {
+        try {
+            return stack.getFoodProperties(eater);
+        } catch (RuntimeException | LinkageError ignored) {
+            return null;
+        }
+    }
+
+    private static String safeStackName(ItemStack stack, ResourceLocation fallbackId) {
+        try {
+            String name = stack.getHoverName().getString();
+            return name == null || name.isBlank() ? fallbackId.toString() : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return fallbackId.toString();
+        }
     }
 
     private String displayName(String idText) {
@@ -173,7 +237,7 @@ public final class FoodSelectionScreen extends Screen {
         ResourceLocation id = ResourceLocation.tryParse(idText);
         if (id == null) return idText;
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
-        return item == null ? idText : new ItemStack(item).getHoverName().getString();
+        return item == null ? idText : safeStackName(new ItemStack(item), id);
     }
 
     private void rebuildScreen() {
@@ -183,22 +247,27 @@ public final class FoodSelectionScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        graphics.drawCenteredString(font, title, width / 2, 20, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFFFF);
         String selected = LClientConfig.get().smartOffhandFoodId;
+        String current = "Actual: " + displayName(selected) + " · detectada, AUTO o ID modded";
         graphics.drawCenteredString(font,
-                "Actual: " + displayName(selected) + " · elige una detectada, AUTO o un ID modded",
+                font.plainSubstrByWidth(current, Math.max(160, width - 24)),
                 width / 2,
-                37,
+                32,
                 0xFFA9BAC9);
-        if (foods.isEmpty()) {
+        if (foods.isEmpty() && minecraft != null && minecraft.player != null) {
             graphics.drawCenteredString(font,
-                    "No hay comidas detectadas en los 36 slots del inventario.",
+                    "No hay comidas utilizables detectadas en los 36 slots.",
                     width / 2,
-                    87,
+                    47,
                     0xFF8C9DAC);
         }
         if (!feedback.isBlank()) {
-            graphics.drawCenteredString(font, feedback, width / 2, height - 20, 0xFF8FD8A0);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth(feedback, Math.max(160, width - 24)),
+                    width / 2,
+                    height - 14,
+                    0xFF8FD8A0);
         }
         super.render(graphics, mouseX, mouseY, partialTick);
     }

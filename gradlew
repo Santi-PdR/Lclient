@@ -11,7 +11,7 @@ if [ ! -f "$WRAPPER_JAR" ]; then
     elif command -v wget >/dev/null 2>&1; then
         wget -O "$WRAPPER_JAR" https://raw.githubusercontent.com/gradle/gradle/v8.1.1/gradle/wrapper/gradle-wrapper.jar
     else
-        echo "CopyL: curl or wget is required for the first Gradle wrapper run." >&2
+        echo "Lclient: curl or wget is required for the first Gradle wrapper run." >&2
         exit 1
     fi
 fi

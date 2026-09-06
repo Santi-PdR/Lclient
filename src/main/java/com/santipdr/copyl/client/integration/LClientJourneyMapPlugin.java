@@ -15,9 +15,9 @@ import java.util.EnumSet;
 /**
  * JourneyMap 5.10.x / API 1.9 plugin used only for Lclient Recon waypoints.
  *
- * The API is session-aware: JourneyMap may stop and restart mapping while the
- * Minecraft process remains alive. We therefore never retain a Waypoint object
- * across mapping sessions and we let show() replace the fixed display id.
+ * We never retain a JourneyMap Waypoint object across mapping sessions. Only
+ * immutable waypoint data is cached so DISPLAY_UPDATE can rebuild the current
+ * transient marker when JourneyMap refreshes its display registry.
  */
 @journeymap.client.api.ClientPlugin
 public final class LClientJourneyMapPlugin implements IClientPlugin {
@@ -30,6 +30,8 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
     private static long nextProbeAt;
     private static String lastError = "";
     private static String lastLabel = "";
+    private static BlockPos lastPosition;
+    private static ResourceKey<Level> lastDimension;
 
     @Override
     public void initialize(IClientAPI clientAPI) {
@@ -38,12 +40,16 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         acceptsWaypoints = false;
         nextProbeAt = 0L;
         lastError = "";
-        lastLabel = "";
+        clearWaypointData();
 
         try {
             api.subscribe(
                     getModId(),
-                    EnumSet.of(ClientEvent.Type.MAPPING_STARTED, ClientEvent.Type.MAPPING_STOPPED)
+                    EnumSet.of(
+                            ClientEvent.Type.DISPLAY_UPDATE,
+                            ClientEvent.Type.MAPPING_STARTED,
+                            ClientEvent.Type.MAPPING_STOPPED
+                    )
             );
             probeState(true);
         } catch (Throwable throwable) {
@@ -62,16 +68,24 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         try {
             if (event.type == ClientEvent.Type.MAPPING_STARTED) {
                 mappingActive = true;
-                refreshAcceptance();
-                lastError = "";
+                if (refreshAcceptance()) lastError = "";
                 nextProbeAt = System.currentTimeMillis() + PROBE_INTERVAL_MS;
             } else if (event.type == ClientEvent.Type.MAPPING_STOPPED) {
                 // JourneyMap owns and clears its session display registry here.
-                // Do not call remove() on an object created by the old session.
                 mappingActive = false;
                 acceptsWaypoints = false;
-                lastLabel = "";
+                clearWaypointData();
                 nextProbeAt = 0L;
+            } else if (event.type == ClientEvent.Type.DISPLAY_UPDATE) {
+                // Non-persistent displayables are expected to be re-published
+                // when JourneyMap asks plugins to refresh a dimension.
+                if (mappingActive
+                        && acceptsWaypoints
+                        && lastPosition != null
+                        && lastDimension != null
+                        && lastDimension.equals(event.dimension)) {
+                    showReconWaypoint(lastPosition, lastLabel, lastDimension, false);
+                }
             }
         } catch (Throwable throwable) {
             recordError("Error procesando el estado de JourneyMap", throwable);
@@ -84,16 +98,22 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         return mappingActive && acceptsWaypoints;
     }
 
-    /**
-     * Shows/replaces the single Recon waypoint. IClientAPI#show replaces an
-     * existing displayable with the same mod id, type and display id, so no
-     * stale Waypoint reference is required.
-     */
+    /** Shows/replaces the single Recon waypoint using a stable display id. */
     public static boolean markRecon(BlockPos pos, String label, ResourceKey<Level> dimension) {
         if (pos == null || dimension == null || !isReady()) return false;
+        return showReconWaypoint(pos.immutable(), sanitizeLabel(label), dimension, true);
+    }
 
+    private static boolean showReconWaypoint(
+            BlockPos pos,
+            String safeLabel,
+            ResourceKey<Level> dimension,
+            boolean remember
+    ) {
         try {
-            String safeLabel = sanitizeLabel(label);
+            IClientAPI current = api;
+            if (current == null) return false;
+
             Waypoint waypoint = new Waypoint(
                     CopyL.MOD_ID,
                     RECON_ID,
@@ -102,8 +122,12 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
                     pos
             ).setColor(0x5AAFFF).setPersistent(false).setEditable(false);
 
-            api.show(waypoint);
-            lastLabel = safeLabel;
+            current.show(waypoint);
+            if (remember) {
+                lastPosition = pos.immutable();
+                lastDimension = dimension;
+                lastLabel = safeLabel;
+            }
             lastError = "";
             return true;
         } catch (Throwable throwable) {
@@ -113,14 +137,17 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
     }
 
     public static boolean clearTacticalWaypoints() {
-        if (api == null) return false;
+        if (api == null) {
+            clearWaypointData();
+            return false;
+        }
         try {
-            // Remove by owner/type rather than by a potentially stale object.
             api.removeAll(CopyL.MOD_ID, DisplayType.Waypoint);
-            lastLabel = "";
+            clearWaypointData();
             lastError = "";
             return true;
         } catch (Throwable throwable) {
+            clearWaypointData();
             recordError("No se pudo limpiar el waypoint", throwable);
             return false;
         }
@@ -146,8 +173,12 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         try {
             // API 1.9 documents getDataPath() as non-null only while mapping.
             mappingActive = current.getDataPath(CopyL.MOD_ID) != null;
-            if (mappingActive) refreshAcceptance();
-            else acceptsWaypoints = false;
+            if (mappingActive) {
+                if (refreshAcceptance()) lastError = "";
+            } else {
+                acceptsWaypoints = false;
+                lastError = "";
+            }
         } catch (Throwable throwable) {
             mappingActive = false;
             acceptsWaypoints = false;
@@ -155,13 +186,25 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         }
     }
 
-    private static void refreshAcceptance() {
+    /**
+     * @return true when the API call itself succeeded, regardless of whether
+     * the player currently accepts this display type.
+     */
+    private static boolean refreshAcceptance() {
         try {
             acceptsWaypoints = api != null && api.playerAccepts(CopyL.MOD_ID, DisplayType.Waypoint);
+            return true;
         } catch (Throwable throwable) {
             acceptsWaypoints = false;
             recordError("No se pudo consultar permiso de waypoints", throwable);
+            return false;
         }
+    }
+
+    private static void clearWaypointData() {
+        lastLabel = "";
+        lastPosition = null;
+        lastDimension = null;
     }
 
     private static String sanitizeLabel(String label) {

@@ -4,26 +4,26 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="lclient"
-version="2.5.0"
+version="2.6.0"
 displayName="Lclient"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
 Cliente modular 100% client-side para Forge 1.20.1.
 
-Lclient 2.5 se centra en estabilidad, recuperación y compatibilidad manteniendo cinco módulos en una única ruleta: CopyL, Loot ESP, Smart Offhand, Advanced Recon y JourneyMap+ opcional.
+Lclient 2.6 endurece los cinco módulos actuales —CopyL, Loot ESP, Smart Offhand, Advanced Recon y JourneyMap+— contra cambios de mundo, configuraciones antiguas, inputs mantenidos, GUI Scale alto y comportamientos defectuosos de otros mods.
 
-JourneyMap+ está preparado para JourneyMap 1.20.1-5.10.x / API 1.9. La integración sigue el ciclo real MAPPING_STARTED/MAPPING_STOPPED, no conserva waypoints de sesiones anteriores, reemplaza el waypoint Recon mediante un display ID estable y muestra diagnósticos reales cuando la API no está disponible.
+JourneyMap+ usa JourneyMap 1.20.1-5.10.x / API 1.9 como integración opcional. Sigue MAPPING_STARTED/MAPPING_STOPPED/DISPLAY_UPDATE, reconstruye el waypoint transitorio de Recon cuando JourneyMap refresca displays y nunca conserva objetos Waypoint de una sesión anterior.
 
-Loot ESP mantiene su render x-ray con NO_DEPTH_TEST para ItemEntity ya cargados por el cliente, pero ahora limita la frecuencia de búsqueda de entidades para reducir coste en zonas con mucho loot.
+Loot ESP conserva su render x-ray con NO_DEPTH_TEST para ItemEntity ya cargados por el cliente. Libera toda referencia al ClientLevel al desactivarse/salir y limita lotes extremos de drops para proteger FPS sin consultar información adicional del servidor.
 
-Smart Offhand conserva la elección AUTO o una comida concreta y mejora la recuperación del objeto anterior al desconectarse. El selector de comida mantiene página y feedback al cambiar opciones.
+Smart Offhand usa propiedades de comida del ItemStack, admite AUTO o una comida exacta, evita alimentos perjudiciales en AUTO, restaura la offhand sólo cuando el slot original coincide exactamente y aísla hooks de alimentos modded defectuosos.
 
-CopyL usa edición transaccional: Guardar aplica todos los cambios y Cancelar realmente los descarta. Las configuraciones de Lclient/CopyL se escriben de forma atómica y una configuración dañada se respalda automáticamente antes de regenerar valores válidos.
+CopyL mantiene 10 slots con nombres, variables dinámicas y edición transaccional. Repara/migra configs antiguas, elimina conflictos de teclas, sanea texto externo y evita activaciones fantasma al cerrar menús o reasignar teclas.
 
-Advanced Recon conserva zoom render-only, rueda para magnificación, raycast largo y Target Panel sólo durante zoom. Los cambios rápidos de zoom se guardan con debounce para evitar escrituras de disco por cada paso de la rueda.
+Advanced Recon conserva zoom render-only, rueda de magnificación, raycast largo, waypoint donde realmente se mira y Target Panel sólo durante zoom. Su raycast se cachea brevemente para rendimiento, fuerza una lectura fresca al marcar y tolera entidades/bloques modded con hooks rotos. El zoom nunca amplía el FOV respecto al FOV real del jugador.
 
-Lclient no añade controles propios a Opciones > Controles. La tecla global se configura desde Mods > Lclient > Config; los módulos y sus teclas se administran desde la ruleta.
+Las interfaces de Lclient son adaptativas y la configuración no añade controles propios a Opciones > Controles. La tecla global se cambia desde Mods > Lclient > Config; las teclas internas se administran desde la ruleta.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 

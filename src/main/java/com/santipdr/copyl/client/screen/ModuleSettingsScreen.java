@@ -3,6 +3,7 @@ package com.santipdr.copyl.client.screen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.client.CopyLKeyMappings;
 import com.santipdr.copyl.client.LClientConfig;
+import com.santipdr.copyl.client.LootEspRenderer;
 import com.santipdr.copyl.client.MessageConfig;
 import com.santipdr.copyl.client.integration.JourneyMapBridge;
 import net.minecraft.client.gui.GuiGraphics;
@@ -43,24 +44,31 @@ public final class ModuleSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        int startY = height / 2 - 66;
+        boolean compact = height < 250;
+        boolean tight = height < 200;
+        int buttonHeight = compact ? 18 : 20;
+        int step = tight ? 21 : compact ? 23 : 27;
+        int startY = tight ? 34 : compact ? 50 : height / 2 - 66;
+        int buttonWidth = Math.min(240, Math.max(180, width - 24));
+        int left = cx - buttonWidth / 2;
 
         enabledButton = addRenderableWidget(Button.builder(enabledLabel(), b -> {
             toggleEnabled();
             refreshLabels();
-        }).bounds(cx - 120, startY, 240, 20).build());
+        }).bounds(left, startY, buttonWidth, buttonHeight).build());
 
         secondaryButton = addRenderableWidget(Button.builder(secondaryLabel(), b -> secondaryAction())
-                .bounds(cx - 120, startY + 27, 240, 20).build());
+                .bounds(left, startY + step, buttonWidth, buttonHeight).build());
         tertiaryButton = addRenderableWidget(Button.builder(tertiaryLabel(), b -> tertiaryAction())
-                .bounds(cx - 120, startY + 54, 240, 20).build());
+                .bounds(left, startY + step * 2, buttonWidth, buttonHeight).build());
         actionButton = addRenderableWidget(Button.builder(actionLabel(), b -> action())
-                .bounds(cx - 120, startY + 81, 240, 20).build());
+                .bounds(left, startY + step * 3, buttonWidth, buttonHeight).build());
         quaternaryButton = addRenderableWidget(Button.builder(quaternaryLabel(), b -> quaternaryAction())
-                .bounds(cx - 120, startY + 108, 240, 20).build());
+                .bounds(left, startY + step * 4, buttonWidth, buttonHeight).build());
 
+        int backY = startY + step * 5 + (compact ? 2 : 7);
         addRenderableWidget(Button.builder(Component.literal("Volver a la ruleta"), b -> onClose())
-                .bounds(cx - 120, startY + 142, 240, 20).build());
+                .bounds(left, backY, buttonWidth, buttonHeight).build());
 
         updateVisibility();
     }
@@ -222,7 +230,12 @@ public final class ModuleSettingsScreen extends Screen {
         if (id == null) return idText;
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
         if (item == null) return idText;
-        return new ItemStack(item).getHoverName().getString();
+        try {
+            String name = new ItemStack(item).getHoverName().getString();
+            return name == null || name.isBlank() ? idText : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return idText;
+        }
     }
 
     private boolean isEnabled() {
@@ -240,7 +253,10 @@ public final class ModuleSettingsScreen extends Screen {
         LClientConfig c = LClientConfig.get();
         switch (module) {
             case COPYL -> c.quickMessages = !c.quickMessages;
-            case LOOT_ESP -> c.lootEsp = !c.lootEsp;
+            case LOOT_ESP -> {
+                c.lootEsp = !c.lootEsp;
+                if (!c.lootEsp) LootEspRenderer.clearCache();
+            }
             case SMART_OFFHAND -> c.smartOffhand = !c.smartOffhand;
             case RECON -> {
                 c.recon = !c.recon;
@@ -316,26 +332,40 @@ public final class ModuleSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        graphics.drawCenteredString(font, module.title, width / 2, 26, 0xFFFFFFFF);
-        graphics.drawCenteredString(font, module.subtitle, width / 2, 42, 0xFFAAB7C4);
+        boolean compact = height < 250;
+        boolean tight = height < 200;
+        int maxTextWidth = Math.max(160, width - 24);
 
-        String info = switch (module) {
-            case LOOT_ESP -> "X-ray propio: caja + marcador opcional con NO_DEPTH_TEST. Sólo items ya cargados por el cliente.";
-            case SMART_OFFHAND -> "AUTO o comida exacta. Si elegís una, no cambia a otra salvo que habilites el fallback.";
-            case RECON -> "Mantén Zoom. Rueda arriba = más zoom; abajo = menos. Waypoint usa el raycast largo real.";
-            case JOURNEYMAP -> JourneyMapBridge.getStatusText();
-            case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
-        };
+        graphics.drawCenteredString(font, module.title, width / 2, tight ? 5 : 10, 0xFFFFFFFF);
         graphics.drawCenteredString(font,
-                font.plainSubstrByWidth(info, Math.max(180, width - 48)),
+                font.plainSubstrByWidth(module.subtitle, maxTextWidth),
                 width / 2,
-                60,
-                module == LClientWheelScreen.Module.JOURNEYMAP && !JourneyMapBridge.isReady()
-                        ? 0xFFFFB28A
-                        : 0xFF8193A4);
+                tight ? 17 : 24,
+                0xFFAAB7C4);
+
+        if (!tight) {
+            String info = switch (module) {
+                case LOOT_ESP -> "X-ray propio; sólo items cargados por el cliente.";
+                case SMART_OFFHAND -> "AUTO usa comida segura; selección exacta respeta tu elección.";
+                case RECON -> "Mantén Zoom; rueda ajusta; waypoint usa el raycast largo.";
+                case JOURNEYMAP -> JourneyMapBridge.getStatusText();
+                case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
+            };
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth(info, maxTextWidth),
+                    width / 2,
+                    compact ? 37 : 60,
+                    module == LClientWheelScreen.Module.JOURNEYMAP && !JourneyMapBridge.isReady()
+                            ? 0xFFFFB28A
+                            : 0xFF8193A4);
+        }
 
         if (!feedback.isBlank() && System.currentTimeMillis() <= feedbackUntil) {
-            graphics.drawCenteredString(font, feedback, width / 2, height - 18, 0xFFFFB28A);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth(feedback, maxTextWidth),
+                    width / 2,
+                    height - 10,
+                    0xFFFFB28A);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);
