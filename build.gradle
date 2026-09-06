@@ -5,7 +5,7 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
 }
 
-version = '2.2.0'
+version = '2.3.0'
 group = 'com.santipdr.lclient'
 
 base {
@@ -48,7 +48,7 @@ repositories {
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
 
-    // Compile against the exact JourneyMap generation used by the Jobs pack.
+    // Compile against the JourneyMap generation used by the Jobs pack.
     // JourneyMap 1.20.1-5.10.3 exposes API 1.20-1.9-SNAPSHOT.
     compileOnly fg.deobf('curse.maven:journeymap-32274:5789363')
 }
