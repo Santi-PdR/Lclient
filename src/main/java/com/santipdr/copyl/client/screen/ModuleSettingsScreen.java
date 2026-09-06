@@ -31,8 +31,8 @@ public final class ModuleSettingsScreen extends Screen {
     private Button actionButton;
     private Button quaternaryButton;
     private CaptureTarget captureTarget = CaptureTarget.NONE;
-    private String keyWarning = "";
-    private long keyWarningUntil;
+    private String feedback = "";
+    private long feedbackUntil;
 
     public ModuleSettingsScreen(Screen parent, LClientWheelScreen.Module module) {
         super(Component.literal(module.title));
@@ -123,7 +123,10 @@ public final class ModuleSettingsScreen extends Screen {
             case LOOT_ESP -> c.lootEspRange = cycle(c.lootEspRange, 32, 64, 96, 128, 160, 192);
             case SMART_OFFHAND -> c.foodThreshold = cycle(c.foodThreshold, 8, 10, 12, 14, 16);
             case RECON -> captureTarget = CaptureTarget.RECON_ZOOM;
-            case JOURNEYMAP -> c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
+            case JOURNEYMAP -> {
+                c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
+                if (!c.journeyMapReconWaypoint) JourneyMapBridge.clearTacticalWaypoints();
+            }
             default -> { }
         }
         c.save();
@@ -152,7 +155,8 @@ public final class ModuleSettingsScreen extends Screen {
         } else if (module == LClientWheelScreen.Module.RECON) {
             c.reconRange = cycle(c.reconRange, 128, 192, 256, 384, 512);
         } else if (module == LClientWheelScreen.Module.JOURNEYMAP) {
-            JourneyMapBridge.clearTacticalWaypoints();
+            boolean cleared = JourneyMapBridge.clearTacticalWaypoints();
+            showFeedback(cleared ? "Waypoint de Lclient eliminado." : JourneyMapBridge.getStatusText());
         }
         c.save();
         refreshLabels();
@@ -238,8 +242,14 @@ public final class ModuleSettingsScreen extends Screen {
             case COPYL -> c.quickMessages = !c.quickMessages;
             case LOOT_ESP -> c.lootEsp = !c.lootEsp;
             case SMART_OFFHAND -> c.smartOffhand = !c.smartOffhand;
-            case RECON -> c.recon = !c.recon;
-            case JOURNEYMAP -> c.journeyMap = !c.journeyMap;
+            case RECON -> {
+                c.recon = !c.recon;
+                if (!c.recon) JourneyMapBridge.clearTacticalWaypoints();
+            }
+            case JOURNEYMAP -> {
+                c.journeyMap = !c.journeyMap;
+                if (!c.journeyMap) JourneyMapBridge.clearTacticalWaypoints();
+            }
         }
         c.save();
     }
@@ -257,8 +267,7 @@ public final class ModuleSettingsScreen extends Screen {
             LClientConfig config = LClientConfig.get();
 
             if (newKey >= 0 && conflictsWithReservedKey(newKey, config)) {
-                keyWarning = "Esa tecla ya está reservada por otro control de Lclient.";
-                keyWarningUntil = System.currentTimeMillis() + 3200L;
+                showFeedback("Esa tecla ya está reservada por otro control de Lclient.");
                 captureTarget = CaptureTarget.NONE;
                 refreshLabels();
                 return true;
@@ -299,6 +308,11 @@ public final class ModuleSettingsScreen extends Screen {
         if (changed) messages.save();
     }
 
+    private void showFeedback(String text) {
+        feedback = text == null ? "" : text;
+        feedbackUntil = System.currentTimeMillis() + 3600L;
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
@@ -309,17 +323,19 @@ public final class ModuleSettingsScreen extends Screen {
             case LOOT_ESP -> "X-ray propio: caja + marcador opcional con NO_DEPTH_TEST. Sólo items ya cargados por el cliente.";
             case SMART_OFFHAND -> "AUTO o comida exacta. Si elegís una, no cambia a otra salvo que habilites el fallback.";
             case RECON -> "Mantén Zoom. Rueda arriba = más zoom; abajo = menos. Waypoint usa el raycast largo real.";
-            case JOURNEYMAP -> JourneyMapBridge.isReady()
-                    ? "JourneyMap 5.10.x conectado. Recon puede crear su waypoint temporal."
-                    : JourneyMapBridge.isInstalled()
-                    ? "JourneyMap detectado; esperando a que su API termine de iniciar."
-                    : "JourneyMap no está instalado; Lclient funciona igualmente.";
+            case JOURNEYMAP -> JourneyMapBridge.getStatusText();
             case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
         };
-        graphics.drawCenteredString(font, info, width / 2, 60, 0xFF8193A4);
+        graphics.drawCenteredString(font,
+                font.plainSubstrByWidth(info, Math.max(180, width - 48)),
+                width / 2,
+                60,
+                module == LClientWheelScreen.Module.JOURNEYMAP && !JourneyMapBridge.isReady()
+                        ? 0xFFFFB28A
+                        : 0xFF8193A4);
 
-        if (!keyWarning.isBlank() && System.currentTimeMillis() <= keyWarningUntil) {
-            graphics.drawCenteredString(font, keyWarning, width / 2, height - 18, 0xFFFFB28A);
+        if (!feedback.isBlank() && System.currentTimeMillis() <= feedbackUntil) {
+            graphics.drawCenteredString(font, feedback, width / 2, height - 18, 0xFFFFB28A);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);
