@@ -6,29 +6,39 @@ Lclient es un cliente modular **100% client-side** para Minecraft Forge 1.20.1.
 
 Todo se controla desde una única ruleta. CopyL es un módulo más del mismo cliente, no un menú/mod separado.
 
-La tecla de apertura de la ruleta **no se registra en Opciones > Controles**. Se cambia desde `Mods > Lclient > Config`. Las teclas internas de CopyL, Recon y el resto de ajustes se editan desde la propia ruleta.
+La tecla de apertura de la ruleta **no se registra en Opciones > Controles**. Se cambia desde `Mods > Lclient > Config`. Las teclas internas de CopyL y Recon se editan desde la propia ruleta.
 
-## Lclient 2.2.0
+## Lclient 2.3.0
+
+La 2.3 elimina módulos que habían terminado generando ruido o duplicando funciones del pack. Ya no existen Sound Radar, Combat Log, centro de notificaciones ni Entity Alerts.
+
+Los cinco módulos actuales son:
 
 - **CopyL / Mensajes rápidos:** 10 mensajes o comandos con teclas propias, configurados dentro de la ruleta.
-- **Sound Radar:** deja de usar una lista superior. Los sonidos relevantes aparecen alrededor de la mira según la dirección real desde la que llegan, con distancia y diferencia vertical. Agrupa repeticiones y puede ignorar sonidos generados por el jugador local.
-- **Loot ESP:** resalta `ItemEntity` dentro del radio configurado y recuerda/restaura el estado de glow previo de cada item.
-- **Combat + Notificaciones:** el target panel sigue disponible al apuntar a una entidad, pero el historial de golpes y los avisos ya no aparecen flotando durante el gameplay. La ruleta muestra un contador de elementos nuevos y al abrir el módulo aparece un centro con historial de avisos y combate, scroll y opciones para limpiar cada vista.
-- **Smart Offhand:** mueve automáticamente una comida adecuada a la offhand cuando baja el hambre y restaura el objeto anterior sólo si puede hacerlo con seguridad. Si se desactiva mientras administra la offhand, intenta restaurar correctamente antes de abandonar el estado.
-- **Entity Alerts:** un chunk debe permanecer cargado/estable antes de que una entidad nueva pueda generar aviso. Items, rayos y el jugador local siguen ignorados. Los avisos se guardan en el centro de notificaciones.
-- **Advanced Recon:** ahora es un zoom táctico real. Mantener la tecla de Zoom reduce temporalmente el FOV y sólo durante ese zoom se muestran coordenadas/distancia del objetivo. Una segunda tecla crea el waypoint de Recon y sólo funciona mientras el zoom está activo. Ambas teclas y la potencia del zoom se configuran desde la ruleta.
-- **JourneyMap+:** integración opcional con JourneyMap 1.20.1-5.10.x / API 1.9. Crea waypoints temporales para el último atacante y Recon, permite desactivar ambos por separado y limpiar los waypoints tácticos desde la ruleta.
+- **Loot ESP:** dejó de depender del glow de Minecraft. Lclient renderiza cajas propias sin depth-test alrededor de `ItemEntity`, por lo que son visibles a través de bloques. Permite ajustar alcance y stack mínimo.
+- **Smart Offhand:** mueve automáticamente una comida adecuada a la offhand cuando baja el hambre y restaura el objeto anterior sólo si el slot de respaldo sigue siendo seguro. No pisa cambios manuales y no toca la offhand si hay un objeto siendo arrastrado por el menú.
+- **Advanced Recon:** zoom táctico render-only, sin modificar el FOV guardado del juego. Mantén la tecla de zoom y usa la rueda del mouse: arriba aumenta el zoom y abajo lo reduce. El raycast de Recon alcanza hasta la distancia configurada y compara bloques/entidades, de modo que el waypoint se crea realmente donde miras y no en el reach vanilla. El Target Panel sólo aparece mientras Recon está haciendo zoom.
+- **JourneyMap+:** integración opcional con JourneyMap 1.20.1-5.10.x / API 1.9. Recon puede crear un waypoint temporal en el objetivo del raycast y limpiarlo desde la ruleta.
 
-## Teclas de Recon por defecto
+## Recon
 
-- Zoom táctico: `C` (mantener pulsado).
-- Waypoint de Recon: `V` (sólo mientras el zoom está abierto).
+Teclas por defecto:
 
-Estas teclas no aparecen en `Opciones > Controles`; se cambian entrando a **Advanced Recon** desde la ruleta.
+- Zoom: `C` (mantener pulsado).
+- Waypoint: `V` (sólo mientras el zoom está activo).
+
+Mientras el zoom está activo:
+
+1. La rueda del mouse cambia la magnificación sin mover la hotbar.
+2. El HUD muestra el zoom actual, FOV, alcance, coordenadas y distancia del objetivo.
+3. Si apuntas a una entidad, aparece el Target Panel con nombre, tipo, posición, distancia y vida conocida.
+4. El waypoint usa un raycast client-side largo, no `minecraft.hitResult`/reach vanilla.
+
+El zoom se aplica mediante el evento de render de FOV de Forge, por lo que el valor de Video Settings no se sobrescribe ni necesita restauración posterior.
 
 ## JourneyMap
 
-El pack Jobs usa `journeymap-1.20.1-5.10.3-forge`, que implementa JourneyMap API `1.20-1.9-SNAPSHOT`. Lclient compila contra esa generación mediante el JAR 5.10.3 y mantiene las clases de JourneyMap detrás de un bridge opcional para que Lclient también pueda iniciar sin JourneyMap instalado.
+El pack Jobs usa `journeymap-1.20.1-5.10.3-forge`, que implementa JourneyMap API `1.20-1.9-SNAPSHOT`. Lclient compila contra esa generación mediante el JAR 5.10.3 y mantiene las clases de JourneyMap detrás de un bridge opcional para que el resto del cliente pueda iniciar aunque JourneyMap no esté instalado.
 
 ## Compatibilidad
 
@@ -36,7 +46,7 @@ El pack Jobs usa `journeymap-1.20.1-5.10.3-forge`, que implementa JourneyMap API
 - Forge 47.x
 - Java 17
 - JourneyMap 1.20.1-5.10.x para JourneyMap+
-- JourneyMap es opcional; el resto de Lclient funciona sin él.
+- JourneyMap es opcional
 
 ## Build
 

@@ -22,6 +22,7 @@ public final class ModuleSettingsScreen extends Screen {
     private Button secondaryButton;
     private Button tertiaryButton;
     private Button actionButton;
+    private Button quaternaryButton;
     private CaptureTarget captureTarget = CaptureTarget.NONE;
 
     public ModuleSettingsScreen(Screen parent, LClientWheelScreen.Module module) {
@@ -33,24 +34,24 @@ public final class ModuleSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        int startY = height / 2 - 48;
+        int startY = height / 2 - 66;
 
         enabledButton = addRenderableWidget(Button.builder(enabledLabel(), b -> {
             toggleEnabled();
             refreshLabels();
-        }).bounds(cx - 110, startY, 220, 20).build());
+        }).bounds(cx - 120, startY, 240, 20).build());
 
         secondaryButton = addRenderableWidget(Button.builder(secondaryLabel(), b -> secondaryAction())
-                .bounds(cx - 110, startY + 28, 220, 20).build());
-
+                .bounds(cx - 120, startY + 27, 240, 20).build());
         tertiaryButton = addRenderableWidget(Button.builder(tertiaryLabel(), b -> tertiaryAction())
-                .bounds(cx - 110, startY + 56, 220, 20).build());
-
+                .bounds(cx - 120, startY + 54, 240, 20).build());
         actionButton = addRenderableWidget(Button.builder(actionLabel(), b -> action())
-                .bounds(cx - 110, startY + 84, 220, 20).build());
+                .bounds(cx - 120, startY + 81, 240, 20).build());
+        quaternaryButton = addRenderableWidget(Button.builder(quaternaryLabel(), b -> quaternaryAction())
+                .bounds(cx - 120, startY + 108, 240, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Volver a la ruleta"), b -> onClose())
-                .bounds(cx - 110, startY + 120, 220, 20).build());
+                .bounds(cx - 120, startY + 142, 240, 20).build());
 
         updateVisibility();
     }
@@ -62,28 +63,24 @@ public final class ModuleSettingsScreen extends Screen {
     private Component secondaryLabel() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case SOUND_RADAR -> Component.literal("Alcance: " + c.soundRadarRange + " m");
             case LOOT_ESP -> Component.literal("Alcance: " + c.lootEspRange + " m");
             case SMART_OFFHAND -> Component.literal("Mover comida con hambre ≤ " + c.foodThreshold);
-            case ENTITY_ALERTS -> Component.literal("Radio de aviso: " + c.entityAlertRange + " m");
             case RECON -> Component.literal(captureTarget == CaptureTarget.RECON_ZOOM
                     ? "PULSA LA TECLA DE ZOOM"
                     : "Tecla de zoom: " + keyName(c.reconZoomKey));
-            case JOURNEYMAP -> Component.literal("Waypoint del atacante: " + yesNo(c.journeyMapAttackerWaypoint));
-            default -> Component.literal("Configuración");
+            case JOURNEYMAP -> Component.literal("Waypoint de Recon: " + yesNo(c.journeyMapReconWaypoint));
+            default -> Component.literal("");
         };
     }
 
     private Component tertiaryLabel() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case SOUND_RADAR -> Component.literal("Ignorar sonidos propios: " + yesNo(c.soundRadarIgnoreSelf));
+            case LOOT_ESP -> Component.literal("Stack mínimo: " + c.lootEspMinStack);
             case SMART_OFFHAND -> Component.literal("Restaurar con hambre ≥ " + c.foodRestoreThreshold);
-            case ENTITY_ALERTS -> Component.literal("Filtro de chunks: " + (c.entityAlertWarmupTicks / 20.0F) + " s");
             case RECON -> Component.literal(captureTarget == CaptureTarget.RECON_WAYPOINT
                     ? "PULSA LA TECLA DE WAYPOINT"
                     : "Tecla de waypoint: " + keyName(c.reconWaypointKey));
-            case JOURNEYMAP -> Component.literal("Waypoint de Recon: " + yesNo(c.journeyMapReconWaypoint));
             default -> Component.literal("");
         };
     }
@@ -91,25 +88,26 @@ public final class ModuleSettingsScreen extends Screen {
     private Component actionLabel() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case RECON -> Component.literal("Potencia del zoom · FOV " + c.reconZoomFov);
-            case JOURNEYMAP -> Component.literal("Limpiar waypoints tácticos de Lclient");
+            case RECON -> Component.literal("Alcance del raycast: " + c.reconRange + " m");
+            case JOURNEYMAP -> Component.literal("Limpiar waypoint táctico de Lclient");
             default -> Component.literal("");
         };
     }
 
-    private static String yesNo(boolean value) {
-        return value ? "SÍ" : "NO";
+    private Component quaternaryLabel() {
+        LClientConfig c = LClientConfig.get();
+        return module == LClientWheelScreen.Module.RECON
+                ? Component.literal("Zoom guardado: FOV " + c.reconZoomFov + " (la rueda lo cambia en vivo)")
+                : Component.literal("");
     }
 
     private void secondaryAction() {
         LClientConfig c = LClientConfig.get();
         switch (module) {
-            case SOUND_RADAR -> c.soundRadarRange = cycle(c.soundRadarRange, 48, 72, 96, 128);
-            case LOOT_ESP -> c.lootEspRange = cycle(c.lootEspRange, 32, 64, 96, 128);
+            case LOOT_ESP -> c.lootEspRange = cycle(c.lootEspRange, 32, 64, 96, 128, 160, 192);
             case SMART_OFFHAND -> c.foodThreshold = cycle(c.foodThreshold, 8, 12, 14, 16);
-            case ENTITY_ALERTS -> c.entityAlertRange = cycle(c.entityAlertRange, 32, 48, 72, 96);
             case RECON -> captureTarget = CaptureTarget.RECON_ZOOM;
-            case JOURNEYMAP -> c.journeyMapAttackerWaypoint = !c.journeyMapAttackerWaypoint;
+            case JOURNEYMAP -> c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
             default -> { }
         }
         c.save();
@@ -119,11 +117,9 @@ public final class ModuleSettingsScreen extends Screen {
     private void tertiaryAction() {
         LClientConfig c = LClientConfig.get();
         switch (module) {
-            case SOUND_RADAR -> c.soundRadarIgnoreSelf = !c.soundRadarIgnoreSelf;
+            case LOOT_ESP -> c.lootEspMinStack = cycle(c.lootEspMinStack, 1, 2, 4, 8, 16, 32);
             case SMART_OFFHAND -> c.foodRestoreThreshold = cycle(c.foodRestoreThreshold, 16, 18, 20);
-            case ENTITY_ALERTS -> c.entityAlertWarmupTicks = cycle(c.entityAlertWarmupTicks, 40, 80, 120);
             case RECON -> captureTarget = CaptureTarget.RECON_WAYPOINT;
-            case JOURNEYMAP -> c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
             default -> { }
         }
         c.save();
@@ -132,13 +128,21 @@ public final class ModuleSettingsScreen extends Screen {
 
     private void action() {
         LClientConfig c = LClientConfig.get();
-        if (module == LClientWheelScreen.Module.JOURNEYMAP) {
-            JourneyMapBridge.clearTacticalWaypoints();
-        } else if (module == LClientWheelScreen.Module.RECON) {
-            c.reconZoomFov = cycle(c.reconZoomFov, 12, 18, 24, 30, 36);
+        if (module == LClientWheelScreen.Module.RECON) {
+            c.reconRange = cycle(c.reconRange, 128, 192, 256, 384, 512);
             c.save();
-            refreshLabels();
+        } else if (module == LClientWheelScreen.Module.JOURNEYMAP) {
+            JourneyMapBridge.clearTacticalWaypoints();
         }
+        refreshLabels();
+    }
+
+    private void quaternaryAction() {
+        if (module != LClientWheelScreen.Module.RECON) return;
+        LClientConfig c = LClientConfig.get();
+        c.reconZoomFov = cycle(c.reconZoomFov, 10, 16, 24, 32, 40, 50);
+        c.save();
+        refreshLabels();
     }
 
     private void refreshLabels() {
@@ -146,19 +150,19 @@ public final class ModuleSettingsScreen extends Screen {
         if (secondaryButton != null) secondaryButton.setMessage(secondaryLabel());
         if (tertiaryButton != null) tertiaryButton.setMessage(tertiaryLabel());
         if (actionButton != null) actionButton.setMessage(actionLabel());
+        if (quaternaryButton != null) quaternaryButton.setMessage(quaternaryLabel());
         updateVisibility();
     }
 
     private void updateVisibility() {
-        if (secondaryButton == null || tertiaryButton == null || actionButton == null) return;
-        secondaryButton.visible = module != LClientWheelScreen.Module.COMBAT;
-        tertiaryButton.visible = module == LClientWheelScreen.Module.SOUND_RADAR
+        if (secondaryButton == null || tertiaryButton == null || actionButton == null || quaternaryButton == null) return;
+        secondaryButton.visible = module != LClientWheelScreen.Module.COPYL;
+        tertiaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
                 || module == LClientWheelScreen.Module.SMART_OFFHAND
-                || module == LClientWheelScreen.Module.ENTITY_ALERTS
-                || module == LClientWheelScreen.Module.RECON
-                || module == LClientWheelScreen.Module.JOURNEYMAP;
+                || module == LClientWheelScreen.Module.RECON;
         actionButton.visible = module == LClientWheelScreen.Module.RECON
                 || module == LClientWheelScreen.Module.JOURNEYMAP;
+        quaternaryButton.visible = module == LClientWheelScreen.Module.RECON;
     }
 
     private static int cycle(int current, int... values) {
@@ -168,6 +172,10 @@ public final class ModuleSettingsScreen extends Screen {
         return values[0];
     }
 
+    private static String yesNo(boolean value) {
+        return value ? "SÍ" : "NO";
+    }
+
     private String keyName(int key) {
         return key < 0 ? "Sin asignar" : InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
     }
@@ -175,28 +183,22 @@ public final class ModuleSettingsScreen extends Screen {
     private boolean isEnabled() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case SOUND_RADAR -> c.soundRadar;
+            case COPYL -> c.quickMessages;
             case LOOT_ESP -> c.lootEsp;
-            case COMBAT -> c.combatPanel;
             case SMART_OFFHAND -> c.smartOffhand;
-            case ENTITY_ALERTS -> c.entityAlerts;
             case RECON -> c.recon;
             case JOURNEYMAP -> c.journeyMap;
-            case COPYL -> c.quickMessages;
         };
     }
 
     private void toggleEnabled() {
         LClientConfig c = LClientConfig.get();
         switch (module) {
-            case SOUND_RADAR -> c.soundRadar = !c.soundRadar;
+            case COPYL -> c.quickMessages = !c.quickMessages;
             case LOOT_ESP -> c.lootEsp = !c.lootEsp;
-            case COMBAT -> c.combatPanel = !c.combatPanel;
             case SMART_OFFHAND -> c.smartOffhand = !c.smartOffhand;
-            case ENTITY_ALERTS -> c.entityAlerts = !c.entityAlerts;
             case RECON -> c.recon = !c.recon;
             case JOURNEYMAP -> c.journeyMap = !c.journeyMap;
-            case COPYL -> c.quickMessages = !c.quickMessages;
         }
         c.save();
     }
@@ -213,7 +215,7 @@ public final class ModuleSettingsScreen extends Screen {
             int newKey = (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) ? -1 : keyCode;
             LClientConfig config = LClientConfig.get();
             if (captureTarget == CaptureTarget.RECON_ZOOM) config.reconZoomKey = newKey;
-            else if (captureTarget == CaptureTarget.RECON_WAYPOINT) config.reconWaypointKey = newKey;
+            else config.reconWaypointKey = newKey;
             config.save();
             captureTarget = CaptureTarget.NONE;
             refreshLabels();
@@ -225,40 +227,21 @@ public final class ModuleSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        graphics.drawCenteredString(font, module.title, width / 2, 28, 0xFFFFFFFF);
-        graphics.drawCenteredString(font, module.subtitle, width / 2, 44, 0xFFAAB7C4);
+        graphics.drawCenteredString(font, module.title, width / 2, 26, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, module.subtitle, width / 2, 42, 0xFFAAB7C4);
 
-        if (module == LClientWheelScreen.Module.COMBAT) {
-            graphics.drawCenteredString(font,
-                    "El historial ya no se dibuja durante el gameplay: se consulta desde la ruleta.",
-                    width / 2,
-                    height / 2 + 4,
-                    0xFF8FA0B0);
-        } else if (module == LClientWheelScreen.Module.JOURNEYMAP) {
-            String status;
-            if (!JourneyMapBridge.isInstalled()) status = "JourneyMap no está instalado";
-            else if (JourneyMapBridge.isReady()) status = "JourneyMap 5.10.x / API 1.9 conectada";
-            else status = "JourneyMap detectado; esperando inicialización de API 1.9";
-            graphics.drawCenteredString(font, status, width / 2, 62, 0xFF8FA0B0);
-        } else if (module == LClientWheelScreen.Module.ENTITY_ALERTS) {
-            graphics.drawCenteredString(font,
-                    "Ignora mobs que sólo entran con chunks nuevos; los avisos quedan en el centro de la ruleta.",
-                    width / 2,
-                    62,
-                    0xFF8FA0B0);
-        } else if (module == LClientWheelScreen.Module.RECON) {
-            graphics.drawCenteredString(font,
-                    "Mantén Zoom para ver coordenadas. Waypoint sólo funciona mientras estás en zoom.",
-                    width / 2,
-                    62,
-                    0xFF8FA0B0);
-        } else if (module == LClientWheelScreen.Module.SOUND_RADAR) {
-            graphics.drawCenteredString(font,
-                    "Los avisos aparecen alrededor de la mira según la dirección real del sonido.",
-                    width / 2,
-                    62,
-                    0xFF8FA0B0);
-        }
+        String info = switch (module) {
+            case LOOT_ESP -> "ESP propio de Lclient: cajas sin depth-test; no depende del glow vanilla.";
+            case SMART_OFFHAND -> "Sólo restaura si el slot de respaldo sigue siendo seguro; no pisa cambios manuales.";
+            case RECON -> "Mantén Zoom. Rueda arriba = más zoom; abajo = menos. Waypoint usa el raycast largo real.";
+            case JOURNEYMAP -> JourneyMapBridge.isReady()
+                    ? "JourneyMap 5.10.x conectado. Recon puede crear su waypoint temporal."
+                    : JourneyMapBridge.isInstalled()
+                    ? "JourneyMap detectado; esperando a que su API termine de iniciar."
+                    : "JourneyMap no está instalado; Lclient funciona igualmente.";
+            case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
+        };
+        graphics.drawCenteredString(font, info, width / 2, 60, 0xFF8193A4);
 
         super.render(graphics, mouseX, mouseY, partialTick);
     }

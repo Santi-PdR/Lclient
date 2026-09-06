@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+/** Persistent configuration for the modules that still belong to Lclient. */
 public final class LClientConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve("lclient.json");
@@ -18,49 +19,40 @@ public final class LClientConfig {
 
     public int wheelKey = GLFW.GLFW_KEY_RIGHT_ALT;
 
-    // Advanced Recon is intentionally configured inside the Lclient wheel.
-    public int reconZoomKey = GLFW.GLFW_KEY_C;
-    public int reconWaypointKey = GLFW.GLFW_KEY_V;
-    public int reconZoomFov = 24;
-
-    // Kept only so old 2.1 configs deserialize safely. It is migrated to reconWaypointKey.
-    @Deprecated
-    public int reconMarkKey = -1;
-
     public boolean quickMessages = true;
-    public boolean soundRadar = true;
-    public boolean lootEsp = true;
-    public boolean combatPanel = true;
-    public boolean smartOffhand = true;
-    public boolean entityAlerts = true;
-    public boolean recon = true;
-    public boolean journeyMap = true;
 
-    public int soundRadarRange = 72;
-    public boolean soundRadarIgnoreSelf = true;
-    public int lootEspRange = 64;
-    public int entityAlertRange = 72;
-    public int entityAlertWarmupTicks = 80;
+    public boolean lootEsp = true;
+    public int lootEspRange = 96;
+    public int lootEspMinStack = 1;
+
+    public boolean smartOffhand = true;
     public int foodThreshold = 14;
     public int foodRestoreThreshold = 18;
 
-    public boolean journeyMapAttackerWaypoint = true;
+    public boolean recon = true;
+    public int reconZoomKey = GLFW.GLFW_KEY_C;
+    public int reconWaypointKey = GLFW.GLFW_KEY_V;
+    /** Lower FOV means stronger zoom. This value is also changed live by the mouse wheel. */
+    public int reconZoomFov = 24;
+    /** Maximum long-range raycast used by Recon instead of vanilla reach. */
+    public int reconRange = 256;
+
+    public boolean journeyMap = true;
     public boolean journeyMapReconWaypoint = true;
 
     public static synchronized LClientConfig get() {
-        if (instance == null) {
-            instance = load();
-        }
+        if (instance == null) instance = load();
         return instance;
     }
 
     private static LClientConfig load() {
-        LClientConfig config;
         if (!Files.exists(PATH)) {
-            config = new LClientConfig();
+            LClientConfig config = new LClientConfig();
             config.save();
             return config;
         }
+
+        LClientConfig config;
         try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
             config = GSON.fromJson(reader, LClientConfig.class);
             if (config == null) config = new LClientConfig();
@@ -73,20 +65,13 @@ public final class LClientConfig {
     }
 
     private void sanitize() {
-        // Lclient 2.1 only had reconMarkKey. Preserve that user's key as the waypoint key.
-        if (reconMarkKey >= 0) {
-            reconWaypointKey = reconMarkKey;
-            reconMarkKey = -1;
-        }
-
-        soundRadarRange = clamp(soundRadarRange, 24, 160, 72);
-        lootEspRange = clamp(lootEspRange, 16, 160, 64);
-        entityAlertRange = clamp(entityAlertRange, 16, 128, 72);
-        entityAlertWarmupTicks = clamp(entityAlertWarmupTicks, 20, 200, 80);
-        reconZoomFov = clamp(reconZoomFov, 10, 50, 24);
+        lootEspRange = clamp(lootEspRange, 16, 192, 96);
+        lootEspMinStack = clamp(lootEspMinStack, 1, 64, 1);
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
+        reconZoomFov = clamp(reconZoomFov, 8, 50, 24);
+        reconRange = clamp(reconRange, 64, 512, 256);
     }
 
     private static int clamp(int value, int min, int max, int fallback) {
