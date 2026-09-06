@@ -39,14 +39,16 @@ public final class LClientJourneyMapPlugin implements IClientPlugin {
         }
     }
 
-    public static void markRecon(BlockPos pos, ResourceKey<Level> dimension) {
+    public static void markRecon(BlockPos pos, String label, ResourceKey<Level> dimension) {
         if (!isReady()) return;
         try {
             if (lastRecon != null) api.remove(lastRecon);
+            String safeLabel = label == null || label.isBlank() ? "Recon" : label.trim();
+            if (safeLabel.length() > 42) safeLabel = safeLabel.substring(0, 42);
             lastRecon = new Waypoint(
                     CopyL.MOD_ID,
                     "lclient_recon",
-                    "Recon Lclient",
+                    "Recon · " + safeLabel,
                     dimension,
                     pos
             ).setColor(0x5AAFFF).setPersistent(false).setEditable(false);
