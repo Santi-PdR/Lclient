@@ -1,0 +1,18 @@
+{
+  "key.categories.copyl": "CopyL",
+  "key.copyl.open_editor": "Open message editor",
+  "key.copyl.slot.1": "Send slot 1",
+  "key.copyl.slot.2": "Send slot 2",
+  "key.copyl.slot.3": "Send slot 3",
+  "key.copyl.slot.4": "Send slot 4",
+  "key.copyl.slot.5": "Send slot 5",
+  "key.copyl.slot.6": "Send slot 6",
+  "key.copyl.slot.7": "Send slot 7",
+  "key.copyl.slot.8": "Send slot 8",
+  "key.copyl.slot.9": "Send slot 9",
+  "key.copyl.slot.10": "Send slot 10",
+  "screen.copyl.title": "CopyL message slots",
+  "screen.copyl.hint": "Write a message or /command. Esc saves changes.",
+  "screen.copyl.slot": "Slot %s",
+  "screen.copyl.save": "Save and close"
+}
