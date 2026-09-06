@@ -76,6 +76,7 @@ public final class ReconController {
             setStatus("Zoom " + zoomText(Minecraft.getInstance(), next));
         }
 
+        // Recon owns the wheel while zoom is held, so the hotbar does not move.
         event.setCanceled(true);
     }
 
@@ -167,16 +168,30 @@ public final class ReconController {
     private static void createWaypoint(Minecraft minecraft, LClientConfig config) {
         HitResult hit = getTargetHit(minecraft);
         BlockPos position = targetBlockPos(hit);
-        if (position == null) return;
+        if (position == null) {
+            setStatus("Recon no encontró un punto para marcar");
+            return;
+        }
 
-        if (!config.journeyMap || !config.journeyMapReconWaypoint || !JourneyMapBridge.isReady()) {
-            setStatus("JourneyMap+ no disponible");
+        if (!config.journeyMap || !config.journeyMapReconWaypoint) {
+            setStatus("JourneyMap+ está desactivado");
+            return;
+        }
+        if (!JourneyMapBridge.isInstalled()) {
+            setStatus("JourneyMap no está instalado");
+            return;
+        }
+        if (!JourneyMapBridge.isReady()) {
+            setStatus(shortStatus(JourneyMapBridge.getStatusText()));
             return;
         }
 
         String label = targetLabel(minecraft, hit, position);
-        JourneyMapBridge.markRecon(position, label, minecraft.level.dimension());
-        setStatus("Waypoint · " + label + " · " + position.toShortString());
+        if (JourneyMapBridge.markRecon(position, label, minecraft.level.dimension())) {
+            setStatus("Waypoint · " + label + " · " + position.toShortString());
+        } else {
+            setStatus(shortStatus(JourneyMapBridge.getStatusText()));
+        }
     }
 
     private static String targetLabel(Minecraft minecraft, HitResult hit, BlockPos position) {
@@ -191,9 +206,14 @@ public final class ReconController {
         return "Dirección";
     }
 
+    private static String shortStatus(String text) {
+        if (text == null || text.isBlank()) return "JourneyMap+ no disponible";
+        return text.length() <= 88 ? text : text.substring(0, 88);
+    }
+
     private static void setStatus(String text) {
-        statusText = text;
-        statusUntil = System.currentTimeMillis() + 1800L;
+        statusText = text == null ? "" : text;
+        statusUntil = System.currentTimeMillis() + 2200L;
     }
 
     private static void reset() {
