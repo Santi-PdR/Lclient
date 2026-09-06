@@ -6,10 +6,10 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 /** Persistent configuration for Lclient's client-side modules. */
 public final class LClientConfig {
@@ -59,28 +59,56 @@ public final class LClientConfig {
             return config;
         }
 
-        LClientConfig config;
         try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
-            config = GSON.fromJson(reader, LClientConfig.class);
-            if (config == null) config = new LClientConfig();
+            LClientConfig config = GSON.fromJson(reader, LClientConfig.class);
+            if (config == null) throw new IllegalStateException("config vacía");
+            config.sanitize();
+            return config;
         } catch (Exception exception) {
-            System.err.println("[Lclient] No se pudo leer " + PATH + ": " + exception.getMessage());
-            config = new LClientConfig();
+            Path backup = AtomicConfigIO.backupBroken(PATH);
+            System.err.println("[Lclient] No se pudo leer " + PATH + ": " + exception.getMessage()
+                    + (backup == null ? "" : " · copia: " + backup));
+            LClientConfig config = new LClientConfig();
+            config.save();
+            return config;
         }
-        config.sanitize();
-        return config;
     }
 
     private void sanitize() {
+        wheelKey = sanitizeKey(wheelKey, GLFW.GLFW_KEY_RIGHT_ALT);
+        lootEspToggleKey = sanitizeKey(lootEspToggleKey, GLFW.GLFW_KEY_X);
+        reconZoomKey = sanitizeKey(reconZoomKey, GLFW.GLFW_KEY_C);
+        reconWaypointKey = sanitizeKey(reconWaypointKey, GLFW.GLFW_KEY_V);
+
+        // Never let two global Lclient actions share a key after loading an
+        // old/corrupted config. The earlier action keeps the key; the later
+        // one becomes unassigned and can be rebound from the wheel.
+        if (lootEspToggleKey >= 0 && lootEspToggleKey == wheelKey) lootEspToggleKey = -1;
+        if (reconZoomKey >= 0 && (reconZoomKey == wheelKey || reconZoomKey == lootEspToggleKey)) reconZoomKey = -1;
+        if (reconWaypointKey >= 0 && (reconWaypointKey == wheelKey
+                || reconWaypointKey == lootEspToggleKey
+                || reconWaypointKey == reconZoomKey)) {
+            reconWaypointKey = -1;
+        }
+
         lootEspRange = clamp(lootEspRange, 16, 192, 96);
         lootEspMinStack = clamp(lootEspMinStack, 1, 64, 1);
+
         if (smartOffhandFoodId == null) smartOffhandFoodId = "";
-        smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(java.util.Locale.ROOT);
+        smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(Locale.ROOT);
+        if (smartOffhandFoodId.length() > 128) smartOffhandFoodId = smartOffhandFoodId.substring(0, 128);
+
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
         reconZoomFov = clamp(reconZoomFov, 8, 50, 24);
         reconRange = clamp(reconRange, 64, 512, 256);
+    }
+
+    private static int sanitizeKey(int key, int fallback) {
+        if (key == -1) return -1;
+        if (key < GLFW.GLFW_KEY_SPACE || key > GLFW.GLFW_KEY_LAST) return fallback;
+        return key;
     }
 
     private static int clamp(int value, int min, int max, int fallback) {
@@ -91,10 +119,7 @@ public final class LClientConfig {
     public synchronized void save() {
         sanitize();
         try {
-            Files.createDirectories(PATH.getParent());
-            try (Writer writer = Files.newBufferedWriter(PATH, StandardCharsets.UTF_8)) {
-                GSON.toJson(this, writer);
-            }
+            AtomicConfigIO.write(PATH, GSON.toJson(this));
         } catch (Exception exception) {
             System.err.println("[Lclient] No se pudo guardar " + PATH + ": " + exception.getMessage());
         }
