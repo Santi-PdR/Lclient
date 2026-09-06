@@ -4,20 +4,24 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="lclient"
-version="2.3.0"
+version="2.4.0"
 displayName="Lclient"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
 Cliente modular 100% client-side para Forge 1.20.1.
 
-Lclient 2.3 se concentra en cinco módulos útiles dentro de una sola ruleta: CopyL / mensajes rápidos, Loot ESP propio, Smart Offhand, Advanced Recon y JourneyMap+ opcional.
+Lclient 2.4 concentra cinco módulos dentro de una única ruleta: CopyL, Loot ESP, Smart Offhand, Advanced Recon y JourneyMap+ opcional.
 
-Advanced Recon usa un zoom render-only que no modifica el FOV guardado de Minecraft. Manteniendo su tecla, la rueda del mouse aumenta o reduce el zoom; el waypoint usa un raycast client-side de largo alcance hacia el punto real bajo la mira. El Target Panel sólo existe durante el zoom.
+Loot ESP usa un render x-ray propio sin depth-test para ItemEntity ya cargados por el cliente. Puede mostrar un marcador vertical, filtrar por alcance/stack y activarse o desactivarse instantáneamente con una tecla configurable (X por defecto).
 
-Loot ESP ya no depende del glow vanilla: renderiza cajas propias sin depth-test alrededor de ItemEntity cercanos. JourneyMap+ está orientado a JourneyMap 1.20.1-5.10.x / API 1.9 y permanece completamente opcional.
+Smart Offhand permite elegir AUTO o una comida concreta, incluso modded por registry ID. Si la comida elegida no está disponible puede mantenerse en modo estricto o usar fallback AUTO. Conserva la restauración segura del objeto previo de la offhand.
 
-Lclient no añade controles propios a Opciones > Controles. La tecla de la ruleta se configura desde Mods > Lclient > Config, y las teclas/ajustes de cada módulo se administran desde la propia ruleta.
+CopyL ofrece 10 slots con nombre, teclas exclusivas y variables dinámicas como {pos}, {x}, {y}, {z}, {dim}, {hp}, {food} y {name}. Lclient protege sus atajos internos para evitar dobles acciones accidentales.
+
+Advanced Recon mantiene su zoom render-only con rueda, raycast client-side largo y Target Panel sólo durante el zoom. Los waypoints de JourneyMap ahora reciben el nombre real del objetivo o bloque apuntado.
+
+Lclient no añade controles propios a Opciones > Controles. La tecla global se configura desde Mods > Lclient > Config; los módulos y sus teclas se administran desde la ruleta.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 
