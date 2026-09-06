@@ -6,6 +6,7 @@ import com.santipdr.copyl.client.integration.JourneyMapBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -84,9 +85,6 @@ public final class ReconController {
             flushZoomConfigIfDue(config, true);
         }
 
-        // Always mirror the physical waypoint key, including while a GUI is
-        // open. Otherwise closing a menu with Zoom+Waypoint held looks like a
-        // new waypoint press on the first gameplay tick.
         boolean physicalWaypointDown = keyDown(minecraft, config.reconWaypointKey);
         if (canUseRecon && zoomActive && physicalWaypointDown && !waypointKeyDown) {
             createWaypoint(minecraft, config);
@@ -105,9 +103,6 @@ public final class ReconController {
         double delta = event.getScrollDelta();
         if (!zoomActive || delta == 0.0D) return;
 
-        // Consume the wheel while Recon is active so vanilla hotbar scrolling
-        // never competes with zoom. High-resolution wheels/trackpads often emit
-        // fractional deltas; accumulate those until a full logical step exists.
         event.setCanceled(true);
         scrollAccumulator += delta;
         int steps = (int) scrollAccumulator;
@@ -131,8 +126,6 @@ public final class ReconController {
             return;
         }
 
-        // Recon is a zoom, never a FOV expander. This matters when the player
-        // uses a low vanilla FOV but previously saved a weaker Recon value.
         double unzoomedFov = event.getFOV();
         double target = Math.min(LClientConfig.get().reconZoomFov, unzoomedFov);
         if (smoothedFov < 0.0D) smoothedFov = unzoomedFov;
@@ -145,7 +138,7 @@ public final class ReconController {
     public static int getZoomFov() {
         Minecraft minecraft = Minecraft.getInstance();
         int configured = LClientConfig.get().reconZoomFov;
-        return minecraft == null ? configured : Math.min(configured, minecraft.options.fov().get());
+        return Math.min(configured, minecraft.options.fov().get());
     }
 
     public static String getZoomText() {
@@ -187,23 +180,40 @@ public final class ReconController {
         }
 
         Vec3 end = eye.add(look.scale(range));
-        BlockHitResult blockHit = minecraft.level.clip(new ClipContext(
-                eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraft.player
-        ));
+        BlockHitResult blockHit;
+        try {
+            blockHit = minecraft.level.clip(new ClipContext(
+                    eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraft.player
+            ));
+        } catch (RuntimeException | LinkageError ignored) {
+            // A broken modded collision hook somewhere along a long ray should
+            // not bring down the entire HUD. Fall back to the intended direction.
+            blockHit = BlockHitResult.miss(
+                    end,
+                    Direction.getNearest((float) look.x, (float) look.y, (float) look.z),
+                    BlockPos.containing(end)
+            );
+        }
 
         double blockDistanceSq = blockHit.getType() == HitResult.Type.MISS
                 ? (double) range * range
                 : eye.distanceToSqr(blockHit.getLocation());
 
         AABB searchBox = minecraft.player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0D);
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                minecraft.player,
-                eye,
-                end,
-                searchBox,
-                entity -> entity != minecraft.player && !entity.isSpectator() && entity.isPickable(),
-                blockDistanceSq
-        );
+        EntityHitResult entityHit = null;
+        try {
+            entityHit = ProjectileUtil.getEntityHitResult(
+                    minecraft.player,
+                    eye,
+                    end,
+                    searchBox,
+                    entity -> safePickableEntity(entity, minecraft.player),
+                    blockDistanceSq
+            );
+        } catch (RuntimeException | LinkageError ignored) {
+            // If a third-party entity breaks collision/pickability code, the
+            // block result is still useful and Recon remains operational.
+        }
 
         HitResult result = entityHit != null ? entityHit : blockHit;
         targetCacheLevel = minecraft.level;
@@ -213,6 +223,15 @@ public final class ReconController {
         targetCacheRange = range;
         targetCacheUntilNs = nowNs + TARGET_CACHE_NS;
         return result;
+    }
+
+    private static boolean safePickableEntity(Entity entity, Entity player) {
+        if (entity == null || entity == player) return false;
+        try {
+            return !entity.isRemoved() && !entity.isSpectator() && entity.isPickable();
+        } catch (RuntimeException | LinkageError ignored) {
+            return false;
+        }
     }
 
     private static boolean canReuseTarget(ClientLevel level, Vec3 eye, Vec3 look, int range, long nowNs) {
@@ -273,14 +292,32 @@ public final class ReconController {
 
     private static String targetLabel(Minecraft minecraft, HitResult hit, BlockPos position) {
         if (hit instanceof EntityHitResult entityHit) {
-            Entity entity = entityHit.getEntity();
-            String name = entity.getName().getString();
-            return name.isBlank() ? BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath() : name;
+            return safeEntityLabel(entityHit.getEntity());
         }
         if (minecraft.level != null && hit != null && hit.getType() == HitResult.Type.BLOCK) {
-            return BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(position).getBlock()).getPath();
+            try {
+                return BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(position).getBlock()).getPath();
+            } catch (RuntimeException | LinkageError ignored) {
+                return "Bloque";
+            }
         }
         return "Dirección";
+    }
+
+    public static String safeEntityLabel(Entity entity) {
+        if (entity == null) return "Entidad";
+        String fallback = "Entidad";
+        try {
+            var id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            if (id != null) fallback = id.getPath();
+        } catch (RuntimeException | LinkageError ignored) {
+        }
+        try {
+            String name = entity.getName().getString();
+            return name == null || name.isBlank() ? fallback : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return fallback;
+        }
     }
 
     private static String shortStatus(String text) {
