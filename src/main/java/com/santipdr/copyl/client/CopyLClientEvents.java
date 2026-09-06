@@ -26,6 +26,8 @@ public final class CopyLClientEvents {
     private static final int[] observedMessageKeys = new int[CopyLKeyMappings.SLOT_COUNT];
     private static boolean wheelKeyDown;
     private static boolean lootEspToggleKeyDown;
+    private static int observedWheelKey = Integer.MIN_VALUE;
+    private static int observedLootEspToggleKey = Integer.MIN_VALUE;
 
     private static int smartFoodSourceSlot = -1;
     private static boolean smartOffhandActive;
@@ -55,6 +57,15 @@ public final class CopyLClientEvents {
             return;
         }
 
+        // Disabling Smart Offhand must restore the managed item even while a
+        // Lclient screen is still open. If restoration is temporarily unsafe
+        // (for example because the carried cursor stack is occupied), keep the
+        // transaction alive and retry on the next tick instead of forgetting it.
+        if (!config.smartOffhand) {
+            restoreManagedOffhandWhenDisabling(minecraft);
+            return;
+        }
+
         if (minecraft.screen == null) handleSmartOffhand(minecraft, config);
     }
 
@@ -62,11 +73,23 @@ public final class CopyLClientEvents {
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (smartOffhandActive) restoreManagedOffhandWhenDisabling(minecraft);
+        clearSmartOffhandState();
+        LootEspRenderer.clearCache();
         resetTransientKeys();
     }
 
     private static void pollWheelKey(Minecraft minecraft, LClientConfig config) {
-        boolean down = keyDown(minecraft, config.wheelKey);
+        int key = config.wheelKey;
+        boolean down = keyDown(minecraft, key);
+
+        // Rebinding while the new key is already held should arm the new key,
+        // not open the wheel on the next tick.
+        if (observedWheelKey != key) {
+            observedWheelKey = key;
+            wheelKeyDown = down;
+            return;
+        }
+
         if (down && !wheelKeyDown && minecraft.screen == null) {
             minecraft.setScreen(new LClientWheelScreen(null));
         }
@@ -74,7 +97,15 @@ public final class CopyLClientEvents {
     }
 
     private static void pollLootEspToggle(Minecraft minecraft, LClientConfig config) {
-        boolean down = keyDown(minecraft, config.lootEspToggleKey);
+        int key = config.lootEspToggleKey;
+        boolean down = keyDown(minecraft, key);
+
+        if (observedLootEspToggleKey != key) {
+            observedLootEspToggleKey = key;
+            lootEspToggleKeyDown = down;
+            return;
+        }
+
         if (down && !lootEspToggleKeyDown
                 && minecraft.screen == null
                 && minecraft.player != null
@@ -124,9 +155,7 @@ public final class CopyLClientEvents {
         if (message.isBlank()) return;
 
         message = expandQuickMessage(message, minecraft.player);
-        if (message.length() > MAX_OUTGOING_MESSAGE_LENGTH) {
-            message = message.substring(0, MAX_OUTGOING_MESSAGE_LENGTH);
-        }
+        message = truncateUtf16Safely(message, MAX_OUTGOING_MESSAGE_LENGTH);
         if (message.isBlank()) return;
 
         if (message.startsWith("/") && message.length() > 1) {
@@ -147,6 +176,18 @@ public final class CopyLClientEvents {
                 .replace("{hp}", Integer.toString(Math.round(player.getHealth())))
                 .replace("{food}", Integer.toString(player.getFoodData().getFoodLevel()))
                 .replace("{name}", player.getGameProfile().getName());
+    }
+
+    private static String truncateUtf16Safely(String value, int maxChars) {
+        if (value == null || value.length() <= maxChars) return value == null ? "" : value;
+        int end = maxChars;
+        if (end > 0
+                && end < value.length()
+                && Character.isHighSurrogate(value.charAt(end - 1))
+                && Character.isLowSurrogate(value.charAt(end))) {
+            end--;
+        }
+        return value.substring(0, end);
     }
 
     private static void handleSmartOffhand(Minecraft minecraft, LClientConfig config) {
@@ -176,16 +217,22 @@ public final class CopyLClientEvents {
             ItemStack original = player.getOffhandItem().copy();
             swapInventoryWithOffhand(minecraft, source);
             ItemStack inserted = player.getOffhandItem().copy();
+            ItemStack sourceAfterSwap = player.getInventory().getItem(source);
 
             if (!inserted.isEmpty()
                     && inserted.isEdible()
-                    && safeFoodProperties(inserted, player) != null) {
+                    && safeFoodProperties(inserted, player) != null
+                    && stackExactlyMatches(sourceAfterSwap, original)) {
                 smartFoodSourceSlot = source;
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
                 smartOffhandActive = true;
             } else {
-                if (!ItemStack.isSameItemSameTags(player.getOffhandItem(), original)) {
+                // Reverse only when the source still contains exactly what the
+                // swap put there; otherwise another inventory mutation won the
+                // race and touching it again would be unsafe.
+                if (stackExactlyMatches(sourceAfterSwap, original)
+                        && !ItemStack.isSameItemSameTags(player.getOffhandItem(), original)) {
                     swapInventoryWithOffhand(minecraft, source);
                 }
                 clearSmartOffhandState();
@@ -195,7 +242,8 @@ public final class CopyLClientEvents {
 
         ItemStack currentOffhand = player.getOffhandItem();
         boolean stillManagedFood = currentOffhand.isEmpty()
-                || ItemStack.isSameItemSameTags(currentOffhand, smartInsertedFood);
+                || (ItemStack.isSameItemSameTags(currentOffhand, smartInsertedFood)
+                && currentOffhand.getCount() <= smartInsertedFood.getCount());
         if (!stillManagedFood) {
             clearSmartOffhandState();
             return;
@@ -212,27 +260,39 @@ public final class CopyLClientEvents {
     }
 
     private static void restoreManagedOffhandWhenDisabling(Minecraft minecraft) {
-        if (!smartOffhandActive) {
+        if (!smartOffhandActive) return;
+
+        Player player = minecraft.player;
+        if (player == null || !player.isAlive() || player.isSpectator()) {
             clearSmartOffhandState();
             return;
         }
 
-        if (minecraft.player != null
-                && minecraft.player.isAlive()
-                && !minecraft.player.isSpectator()
-                && minecraft.gameMode != null
-                && minecraft.player.inventoryMenu.getCarried().isEmpty()
-                && canSafelyRestore(minecraft.player)) {
-            swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
+        // These are transient conditions: do not abandon the original offhand
+        // item. A later tick can restore it safely once the cursor/menu settles.
+        if (minecraft.gameMode == null || !player.inventoryMenu.getCarried().isEmpty()) return;
+
+        if (!canSafelyRestore(player)) {
+            clearSmartOffhandState();
+            return;
         }
+
+        swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
         clearSmartOffhandState();
     }
 
     private static boolean canSafelyRestore(Player player) {
         if (smartFoodSourceSlot < 0 || smartFoodSourceSlot >= 36) return false;
         ItemStack sourceStack = player.getInventory().getItem(smartFoodSourceSlot);
-        if (smartOriginalOffhand.isEmpty()) return sourceStack.isEmpty();
-        return !sourceStack.isEmpty() && ItemStack.isSameItemSameTags(sourceStack, smartOriginalOffhand);
+        return stackExactlyMatches(sourceStack, smartOriginalOffhand);
+    }
+
+    private static boolean stackExactlyMatches(ItemStack actual, ItemStack expected) {
+        if (actual == null || expected == null) return false;
+        if (expected.isEmpty()) return actual.isEmpty();
+        return !actual.isEmpty()
+                && actual.getCount() == expected.getCount()
+                && ItemStack.isSameItemSameTags(actual, expected);
     }
 
     private static int findFoodSlot(Player player, LClientConfig config) {
@@ -293,8 +353,6 @@ public final class CopyLClientEvents {
         try {
             return stack.getFoodProperties(player);
         } catch (RuntimeException ignored) {
-            // A broken third-party dynamic-food hook should only make that item
-            // ineligible for Smart Offhand, not crash the whole client tick.
             return null;
         }
     }
@@ -317,6 +375,7 @@ public final class CopyLClientEvents {
     private static void swapInventoryWithOffhand(Minecraft minecraft, int inventoryIndex) {
         if (minecraft.player == null || minecraft.gameMode == null) return;
         if (inventoryIndex < 0 || inventoryIndex >= 36) return;
+        if (!minecraft.player.inventoryMenu.getCarried().isEmpty()) return;
 
         int menuSlot = inventoryIndex < 9 ? 36 + inventoryIndex : inventoryIndex;
         int containerId = minecraft.player.inventoryMenu.containerId;
@@ -335,6 +394,8 @@ public final class CopyLClientEvents {
     private static void resetTransientKeys() {
         wheelKeyDown = false;
         lootEspToggleKeyDown = false;
+        observedWheelKey = Integer.MIN_VALUE;
+        observedLootEspToggleKey = Integer.MIN_VALUE;
         Arrays.fill(messageKeyDown, false);
         Arrays.fill(observedMessageKeys, Integer.MIN_VALUE);
     }
