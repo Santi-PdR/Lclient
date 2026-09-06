@@ -18,6 +18,7 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -30,6 +31,8 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class LootEspRenderer {
     private static final long SCAN_INTERVAL_MS = 100L;
+    /** Prevent pathological drop piles/farms from turning ESP into a render bottleneck. */
+    private static final int MAX_RENDERED_ITEMS = 256;
 
     private static final float[] COLOR_LARGE = {1.0F, 0.82F, 0.28F};
     private static final float[] COLOR_MEDIUM = {0.45F, 0.92F, 0.72F};
@@ -155,7 +158,22 @@ public final class LootEspRenderer {
                         && item.getItem().getCount() >= config.lootEspMinStack
                         && item.distanceToSqr(minecraft.player) <= rangeSq
         );
-        cachedItems = found.isEmpty() ? Collections.emptyList() : new ArrayList<>(found);
+
+        if (found.isEmpty()) {
+            cachedItems = Collections.emptyList();
+            return;
+        }
+
+        // In extreme farms/explosions, keep the nearest drops first. The cap
+        // affects only rendering cost; it does not query or expose extra data.
+        if (found.size() > MAX_RENDERED_ITEMS) {
+            found.sort(Comparator
+                    .comparingDouble((ItemEntity item) -> item.distanceToSqr(minecraft.player))
+                    .thenComparing((ItemEntity item) -> -item.getItem().getCount()));
+            cachedItems = new ArrayList<>(found.subList(0, MAX_RENDERED_ITEMS));
+        } else {
+            cachedItems = new ArrayList<>(found);
+        }
     }
 
     public static void clearCache() {
