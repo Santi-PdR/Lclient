@@ -4,18 +4,18 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="lclient"
-version="2.1.0"
+version="2.2.0"
 displayName="Lclient"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
 Cliente modular 100% client-side para Forge 1.20.1.
 
-Todos los módulos viven en una única ruleta: CopyL / mensajes rápidos, Sound Radar, Loot ESP, panel de combate y notificaciones, Smart Offhand, alertas de entidades, Advanced Recon e integración táctica con JourneyMap.
+Todos los módulos viven en una única ruleta: CopyL / mensajes rápidos, Sound Radar direccional, Loot ESP, centro de combate y notificaciones, Smart Offhand, alertas de entidades, Advanced Recon con zoom táctico e integración opcional con JourneyMap.
 
 Lclient no añade controles propios a Opciones > Controles. La tecla de la ruleta se configura desde Mods > Lclient > Config, y las teclas/ajustes de cada módulo se administran desde la propia ruleta.
 
-La integración JourneyMap+ está orientada a JourneyMap 1.20.1-5.10.x / API 1.9 y permanece opcional.
+Lclient 2.2 mueve los avisos fuera del gameplay hacia un historial dentro de la ruleta, convierte Recon en un zoom con tecla separada de waypoint y rediseña Sound Radar como indicadores alrededor de la mira. JourneyMap+ está orientado a JourneyMap 1.20.1-5.10.x / API 1.9 y permanece opcional.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 

@@ -10,13 +10,19 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 public final class ModuleSettingsScreen extends Screen {
+    private enum CaptureTarget {
+        NONE,
+        RECON_ZOOM,
+        RECON_WAYPOINT
+    }
+
     private final Screen parent;
     private final LClientWheelScreen.Module module;
     private Button enabledButton;
     private Button secondaryButton;
     private Button tertiaryButton;
     private Button actionButton;
-    private boolean captureReconKey;
+    private CaptureTarget captureTarget = CaptureTarget.NONE;
 
     public ModuleSettingsScreen(Screen parent, LClientWheelScreen.Module module) {
         super(Component.literal(module.title));
@@ -60,7 +66,9 @@ public final class ModuleSettingsScreen extends Screen {
             case LOOT_ESP -> Component.literal("Alcance: " + c.lootEspRange + " m");
             case SMART_OFFHAND -> Component.literal("Mover comida con hambre ≤ " + c.foodThreshold);
             case ENTITY_ALERTS -> Component.literal("Radio de aviso: " + c.entityAlertRange + " m");
-            case RECON -> Component.literal(captureReconKey ? "PULSA UNA TECLA" : "Tecla para marcar: " + keyName(c.reconMarkKey));
+            case RECON -> Component.literal(captureTarget == CaptureTarget.RECON_ZOOM
+                    ? "PULSA LA TECLA DE ZOOM"
+                    : "Tecla de zoom: " + keyName(c.reconZoomKey));
             case JOURNEYMAP -> Component.literal("Waypoint del atacante: " + yesNo(c.journeyMapAttackerWaypoint));
             default -> Component.literal("Configuración");
         };
@@ -69,17 +77,24 @@ public final class ModuleSettingsScreen extends Screen {
     private Component tertiaryLabel() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
+            case SOUND_RADAR -> Component.literal("Ignorar sonidos propios: " + yesNo(c.soundRadarIgnoreSelf));
             case SMART_OFFHAND -> Component.literal("Restaurar con hambre ≥ " + c.foodRestoreThreshold);
             case ENTITY_ALERTS -> Component.literal("Filtro de chunks: " + (c.entityAlertWarmupTicks / 20.0F) + " s");
+            case RECON -> Component.literal(captureTarget == CaptureTarget.RECON_WAYPOINT
+                    ? "PULSA LA TECLA DE WAYPOINT"
+                    : "Tecla de waypoint: " + keyName(c.reconWaypointKey));
             case JOURNEYMAP -> Component.literal("Waypoint de Recon: " + yesNo(c.journeyMapReconWaypoint));
             default -> Component.literal("");
         };
     }
 
     private Component actionLabel() {
-        return module == LClientWheelScreen.Module.JOURNEYMAP
-                ? Component.literal("Limpiar waypoints tácticos de Lclient")
-                : Component.literal("");
+        LClientConfig c = LClientConfig.get();
+        return switch (module) {
+            case RECON -> Component.literal("Potencia del zoom · FOV " + c.reconZoomFov);
+            case JOURNEYMAP -> Component.literal("Limpiar waypoints tácticos de Lclient");
+            default -> Component.literal("");
+        };
     }
 
     private static String yesNo(boolean value) {
@@ -93,7 +108,7 @@ public final class ModuleSettingsScreen extends Screen {
             case LOOT_ESP -> c.lootEspRange = cycle(c.lootEspRange, 32, 64, 96, 128);
             case SMART_OFFHAND -> c.foodThreshold = cycle(c.foodThreshold, 8, 12, 14, 16);
             case ENTITY_ALERTS -> c.entityAlertRange = cycle(c.entityAlertRange, 32, 48, 72, 96);
-            case RECON -> captureReconKey = true;
+            case RECON -> captureTarget = CaptureTarget.RECON_ZOOM;
             case JOURNEYMAP -> c.journeyMapAttackerWaypoint = !c.journeyMapAttackerWaypoint;
             default -> { }
         }
@@ -104,8 +119,10 @@ public final class ModuleSettingsScreen extends Screen {
     private void tertiaryAction() {
         LClientConfig c = LClientConfig.get();
         switch (module) {
+            case SOUND_RADAR -> c.soundRadarIgnoreSelf = !c.soundRadarIgnoreSelf;
             case SMART_OFFHAND -> c.foodRestoreThreshold = cycle(c.foodRestoreThreshold, 16, 18, 20);
             case ENTITY_ALERTS -> c.entityAlertWarmupTicks = cycle(c.entityAlertWarmupTicks, 40, 80, 120);
+            case RECON -> captureTarget = CaptureTarget.RECON_WAYPOINT;
             case JOURNEYMAP -> c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
             default -> { }
         }
@@ -114,8 +131,13 @@ public final class ModuleSettingsScreen extends Screen {
     }
 
     private void action() {
+        LClientConfig c = LClientConfig.get();
         if (module == LClientWheelScreen.Module.JOURNEYMAP) {
             JourneyMapBridge.clearTacticalWaypoints();
+        } else if (module == LClientWheelScreen.Module.RECON) {
+            c.reconZoomFov = cycle(c.reconZoomFov, 12, 18, 24, 30, 36);
+            c.save();
+            refreshLabels();
         }
     }
 
@@ -130,10 +152,13 @@ public final class ModuleSettingsScreen extends Screen {
     private void updateVisibility() {
         if (secondaryButton == null || tertiaryButton == null || actionButton == null) return;
         secondaryButton.visible = module != LClientWheelScreen.Module.COMBAT;
-        tertiaryButton.visible = module == LClientWheelScreen.Module.SMART_OFFHAND
+        tertiaryButton.visible = module == LClientWheelScreen.Module.SOUND_RADAR
+                || module == LClientWheelScreen.Module.SMART_OFFHAND
                 || module == LClientWheelScreen.Module.ENTITY_ALERTS
+                || module == LClientWheelScreen.Module.RECON
                 || module == LClientWheelScreen.Module.JOURNEYMAP;
-        actionButton.visible = module == LClientWheelScreen.Module.JOURNEYMAP;
+        actionButton.visible = module == LClientWheelScreen.Module.RECON
+                || module == LClientWheelScreen.Module.JOURNEYMAP;
     }
 
     private static int cycle(int current, int... values) {
@@ -178,18 +203,19 @@ public final class ModuleSettingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (captureReconKey) {
+        if (captureTarget != CaptureTarget.NONE) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                captureReconKey = false;
-            } else if (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) {
-                LClientConfig.get().reconMarkKey = -1;
-                LClientConfig.get().save();
-                captureReconKey = false;
-            } else {
-                LClientConfig.get().reconMarkKey = keyCode;
-                LClientConfig.get().save();
-                captureReconKey = false;
+                captureTarget = CaptureTarget.NONE;
+                refreshLabels();
+                return true;
             }
+
+            int newKey = (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) ? -1 : keyCode;
+            LClientConfig config = LClientConfig.get();
+            if (captureTarget == CaptureTarget.RECON_ZOOM) config.reconZoomKey = newKey;
+            else if (captureTarget == CaptureTarget.RECON_WAYPOINT) config.reconWaypointKey = newKey;
+            config.save();
+            captureTarget = CaptureTarget.NONE;
             refreshLabels();
             return true;
         }
@@ -204,7 +230,7 @@ public final class ModuleSettingsScreen extends Screen {
 
         if (module == LClientWheelScreen.Module.COMBAT) {
             graphics.drawCenteredString(font,
-                    "Registra daño, entidad real, coordenadas del atacante y tu posición.",
+                    "El historial ya no se dibuja durante el gameplay: se consulta desde la ruleta.",
                     width / 2,
                     height / 2 + 4,
                     0xFF8FA0B0);
@@ -216,7 +242,19 @@ public final class ModuleSettingsScreen extends Screen {
             graphics.drawCenteredString(font, status, width / 2, 62, 0xFF8FA0B0);
         } else if (module == LClientWheelScreen.Module.ENTITY_ALERTS) {
             graphics.drawCenteredString(font,
-                    "Ignora mobs que sólo entran con chunks nuevos; avisa apariciones en zonas ya cargadas.",
+                    "Ignora mobs que sólo entran con chunks nuevos; los avisos quedan en el centro de la ruleta.",
+                    width / 2,
+                    62,
+                    0xFF8FA0B0);
+        } else if (module == LClientWheelScreen.Module.RECON) {
+            graphics.drawCenteredString(font,
+                    "Mantén Zoom para ver coordenadas. Waypoint sólo funciona mientras estás en zoom.",
+                    width / 2,
+                    62,
+                    0xFF8FA0B0);
+        } else if (module == LClientWheelScreen.Module.SOUND_RADAR) {
+            graphics.drawCenteredString(font,
+                    "Los avisos aparecen alrededor de la mira según la dirección real del sonido.",
                     width / 2,
                     62,
                     0xFF8FA0B0);
@@ -227,6 +265,7 @@ public final class ModuleSettingsScreen extends Screen {
 
     @Override
     public void onClose() {
+        captureTarget = CaptureTarget.NONE;
         if (minecraft != null) minecraft.setScreen(parent);
     }
 }
