@@ -179,7 +179,7 @@ public final class CopyLClientEvents {
 
             if (!inserted.isEmpty()
                     && inserted.isEdible()
-                    && inserted.getFoodProperties(player) != null) {
+                    && safeFoodProperties(inserted, player) != null) {
                 smartFoodSourceSlot = source;
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
@@ -253,7 +253,7 @@ public final class CopyLClientEvents {
         int bestCount = -1;
         for (int i = 0; i < 36; i++) {
             ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty() || !stack.isEdible() || stack.getFoodProperties(player) == null) continue;
+            if (stack.isEmpty() || !stack.isEdible() || safeFoodProperties(stack, player) == null) continue;
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (!wanted.equals(id)) continue;
             if (stack.getCount() > bestCount) {
@@ -272,10 +272,7 @@ public final class CopyLClientEvents {
             ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty() || !stack.isEdible()) continue;
 
-            // Forge's stack-aware hook is important for modded foods whose
-            // properties depend on NBT/capabilities. Item#getFoodProperties()
-            // is deprecated and can return the wrong value for those stacks.
-            FoodProperties food = stack.getFoodProperties(player);
+            FoodProperties food = safeFoodProperties(stack, player);
             if (food == null) continue;
 
             float score = Math.min(stack.getCount(), 16) * 0.45F;
@@ -292,13 +289,24 @@ public final class CopyLClientEvents {
         return bestSlot;
     }
 
+    private static FoodProperties safeFoodProperties(ItemStack stack, Player player) {
+        try {
+            return stack.getFoodProperties(player);
+        } catch (RuntimeException ignored) {
+            // A broken third-party dynamic-food hook should only make that item
+            // ineligible for Smart Offhand, not crash the whole client tick.
+            return null;
+        }
+    }
+
     private static float harmfulFoodPenalty(FoodProperties food) {
         float penalty = 0.0F;
         for (var entry : food.getEffects()) {
             var effect = entry.getFirst();
             if (effect == null || effect.getEffect().isBeneficial()) continue;
 
-            float chance = Math.max(0.0F, Math.min(1.0F, entry.getSecond()));
+            Float chanceValue = entry.getSecond();
+            float chance = chanceValue == null ? 0.0F : Math.max(0.0F, Math.min(1.0F, chanceValue));
             float durationWeight = Math.min(effect.getDuration(), 600) / 100.0F;
             float amplifierWeight = Math.min(effect.getAmplifier(), 4) + 1.0F;
             penalty += chance * (12.0F + durationWeight + amplifierWeight * 4.0F);
