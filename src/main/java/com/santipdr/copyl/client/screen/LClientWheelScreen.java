@@ -59,7 +59,14 @@ public final class LClientWheelScreen extends Screen {
 
         if (selected != null) {
             graphics.drawCenteredString(font, selected.subtitle, cx, height - 42, 0xFFD1DCE6);
-            graphics.drawCenteredString(font, statusLine(selected), cx, height - 29, 0xFF91A8BA);
+            String line = statusLine(selected);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth(line, Math.max(160, width - 36)),
+                    cx,
+                    height - 29,
+                    selected == Module.JOURNEYMAP && isEnabled(selected) && !JourneyMapBridge.isReady()
+                            ? 0xFFFFB28A
+                            : 0xFF91A8BA);
             graphics.drawCenteredString(font,
                     "Click izquierdo: configurar  ·  Click derecho: activar/desactivar",
                     cx,
@@ -146,7 +153,7 @@ public final class LClientWheelScreen extends Screen {
             case LOOT_ESP -> keyName(c.lootEspToggleKey) + " · " + c.lootEspRange + "m";
             case SMART_OFFHAND -> foodName(c.smartOffhandFoodId);
             case RECON -> keyName(c.reconZoomKey) + " · FOV " + c.reconZoomFov;
-            case JOURNEYMAP -> JourneyMapBridge.isReady() ? "API lista" : "opcional";
+            case JOURNEYMAP -> !c.journeyMap ? "apagado" : JourneyMapBridge.isReady() ? "API lista" : "revisar";
         };
     }
 
@@ -159,9 +166,7 @@ public final class LClientWheelScreen extends Screen {
                     + (c.smartOffhandFallbackToAuto ? " · fallback AUTO" : " · selección estricta");
             case RECON -> "Zoom " + keyName(c.reconZoomKey) + " · waypoint " + keyName(c.reconWaypointKey)
                     + " · raycast " + c.reconRange + "m";
-            case JOURNEYMAP -> JourneyMapBridge.isReady()
-                    ? "JourneyMap conectado y listo"
-                    : JourneyMapBridge.isInstalled() ? "JourneyMap iniciando" : "JourneyMap no instalado";
+            case JOURNEYMAP -> !c.journeyMap ? "JourneyMap+ desactivado" : JourneyMapBridge.getStatusText();
         };
     }
 
@@ -208,8 +213,14 @@ public final class LClientWheelScreen extends Screen {
             case COPYL -> c.quickMessages = !c.quickMessages;
             case LOOT_ESP -> c.lootEsp = !c.lootEsp;
             case SMART_OFFHAND -> c.smartOffhand = !c.smartOffhand;
-            case RECON -> c.recon = !c.recon;
-            case JOURNEYMAP -> c.journeyMap = !c.journeyMap;
+            case RECON -> {
+                c.recon = !c.recon;
+                if (!c.recon) JourneyMapBridge.clearTacticalWaypoints();
+            }
+            case JOURNEYMAP -> {
+                c.journeyMap = !c.journeyMap;
+                if (!c.journeyMap) JourneyMapBridge.clearTacticalWaypoints();
+            }
         }
         c.save();
     }
