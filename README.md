@@ -1,62 +1,35 @@
-# CopyL
+# Lclient
 
-Mod **100% client-side** para Minecraft Forge 1.20.1 que permite guardar y enviar rápidamente hasta 10 mensajes o comandos mediante teclas configurables.
+Lclient es un cliente modular client-side para Minecraft Forge 1.20.1.
 
-## CopyL 1.2.0
+## Diseño
 
-- 10 mensajes rápidos independientes.
-- Cada mensaje tiene su propio keybind.
-- La tecla y el texto se pueden editar **directamente desde la pantalla de CopyL**.
-- También siguen disponibles en **Opciones → Controles → CopyL**.
-- `-` abre por defecto el editor.
-- `Backspace` o `Delete` mientras editas una tecla la deja sin asignar.
-- `Esc` cancela la captura de una tecla.
-- Se admiten botones del ratón como keybind.
-- Interfaz con animaciones suaves de entrada y hover.
-- Feedback sonoro al pasar por slots y confirmar cambios.
-- Texto normal se envía al chat tal cual fue escrito.
-- Si el contenido empieza con `/`, se envía como comando.
-- Hasta 256 caracteres por mensaje.
-- Los mensajes se guardan en `config/copyl-messages.json`.
-- Los keybinds se guardan mediante las opciones normales de Minecraft.
-- Acceso desde **Mods → CopyL → Config**.
-- No requiere instalar CopyL en el servidor.
+Todo se controla desde una única ruleta. CopyL ya no es un menú/mod aislado: es uno de los módulos del anillo junto a las demás ventajas.
 
-## Uso
+La tecla de apertura de la ruleta **no se registra en Opciones > Controles**. Se cambia desde `Mods > Lclient > Config`. Las teclas internas de CopyL y Recon también se guardan en la configuración propia de Lclient y se editan desde la ruleta.
 
-1. Instala el JAR en la carpeta `mods` de tu cliente Forge 1.20.1.
-2. Entra a un mundo o servidor.
-3. Pulsa `-` para abrir CopyL.
-4. Escribe el contenido de cada mensaje.
-5. Pulsa el botón de tecla del mismo slot y luego la tecla que quieras asignar.
-6. Guarda y cierra.
-7. Al pulsar esa tecla durante el juego, CopyL envía el mensaje automáticamente.
+## Módulos
 
-Ejemplos:
+- **CopyL / Mensajes rápidos:** 10 mensajes o comandos con teclas propias, configurados dentro de la ruleta.
+- **Sound Radar:** muestra dirección, tipo aproximado y distancia de sonidos relevantes recibidos por el cliente.
+- **Loot ESP:** resalta con glow los `ItemEntity` cargados dentro del radio configurado.
+- **Combat + Notificaciones:** panel del objetivo bajo la mira, historial de golpes con entidad y coordenadas, y centro de avisos.
+- **Smart Offhand:** cuando baja el hambre intercambia temporalmente una comida del inventario con la offhand y, al recuperarse, devuelve el objeto anterior.
+- **Entity Alerts:** avisa cuando aparece una entidad cercana; ignora items, rayos y al jugador local.
+- **Advanced Recon:** muestra coordenadas del objetivo y permite marcar lo apuntado con una tecla propia.
+- **JourneyMap+:** crea waypoints temporales para el último atacante y para marcas de Recon cuando JourneyMap está disponible.
 
-- `**Congelar**` → se envía como mensaje.
-- `/spawn` → se envía como comando.
-
-## Requisitos
+## Compatibilidad
 
 - Minecraft 1.20.1
 - Forge 47.x
 - Java 17
+- JourneyMap es opcional; Lclient funciona sin él.
 
-El proyecto compila contra Forge **1.20.1-47.4.10**.
-
-## Compilar
-
-Windows:
-
-```powershell
-.\gradlew.bat build
-```
-
-Linux/macOS:
+## Build
 
 ```bash
 ./gradlew build
 ```
 
-El JAR final queda en `build/libs/`.
+El workflow de GitHub Actions compila el JAR y publica el payload de despliegue desde `main`.

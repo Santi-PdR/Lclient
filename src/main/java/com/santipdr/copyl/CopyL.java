@@ -7,7 +7,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod(CopyL.MOD_ID)
 public final class CopyL {
-    public static final String MOD_ID = "copyl";
+    public static final String MOD_ID = "lclient";
 
     public CopyL() {
         if (FMLEnvironment.dist == Dist.CLIENT) {
