@@ -1,14 +1,12 @@
 package com.santipdr.copyl.client;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.santipdr.copyl.CopyL;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraftforge.api.distmarker.Dist;
@@ -17,42 +15,31 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
-import java.util.OptionalDouble;
 
 /**
- * Reliable dropped-item ESP. Unlike the old client-side glowing flag, these
- * boxes are rendered by Lclient itself and deliberately ignore depth.
+ * Dropped-item ESP rendered entirely by Lclient.
+ *
+ * The old implementation toggled Minecraft's glowing flag and could be
+ * overwritten by entity renderers/mods. This one renders a dedicated line box
+ * for every matching ItemEntity and flushes it while depth testing is disabled.
  */
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class LootEspRenderer {
-    private static final RenderType LOOT_LINES = RenderType.create(
-            "lclient_loot_esp_lines",
-            DefaultVertexFormat.POSITION_COLOR_NORMAL,
-            VertexFormat.Mode.LINES,
-            512,
-            false,
-            false,
-            RenderType.CompositeState.builder()
-                    .setShaderState(RenderStateShard.RENDERTYPE_LINES_SHADER)
-                    .setLineState(new RenderStateShard.LineStateShard(OptionalDouble.empty()))
-                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
-                    .setDepthTestState(RenderStateShard.NO_DEPTH_TEST)
-                    .setCullState(RenderStateShard.NO_CULL)
-                    .setLightmapState(RenderStateShard.NO_LIGHTMAP)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
-                    .createCompositeState(false)
-    );
-
     private LootEspRenderer() {
     }
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
 
         Minecraft minecraft = Minecraft.getInstance();
         LClientConfig config = LClientConfig.get();
-        if (!config.lootEsp || minecraft.player == null || minecraft.level == null || minecraft.options.hideGui) return;
+        if (!config.lootEsp
+                || minecraft.player == null
+                || minecraft.level == null
+                || minecraft.options.hideGui) {
+            return;
+        }
 
         double range = config.lootEspRange;
         double rangeSq = range * range;
@@ -69,26 +56,56 @@ public final class LootEspRenderer {
         var camera = event.getCamera().getPosition();
         PoseStack poses = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
-        VertexConsumer lines = buffers.getBuffer(LOOT_LINES);
+        RenderType lineType = RenderType.lines();
 
-        float pulse = 0.82F + 0.18F * (float) Math.sin(System.currentTimeMillis() / 220.0D);
-        for (ItemEntity item : items) {
-            int count = item.getItem().getCount();
-            float r = count >= 32 ? 1.0F : 0.30F;
-            float g = count >= 16 ? 0.88F : 0.78F;
-            float b = count >= 32 ? 0.35F : 1.0F;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
 
-            LevelRenderer.renderLineBox(
-                    poses,
-                    lines,
-                    item.getBoundingBox().inflate(0.10D).move(-camera.x, -camera.y, -camera.z),
-                    r,
-                    g,
-                    b,
-                    pulse
-            );
+        try {
+            VertexConsumer lines = buffers.getBuffer(lineType);
+            float pulse = 0.78F + 0.22F * (float) Math.sin(System.currentTimeMillis() / 210.0D);
+
+            for (ItemEntity item : items) {
+                int count = item.getItem().getCount();
+
+                // Stack size is readable at a glance without adding labels everywhere.
+                float red;
+                float green;
+                float blue;
+                if (count >= 32) {
+                    red = 1.0F;
+                    green = 0.82F;
+                    blue = 0.28F;
+                } else if (count >= 16) {
+                    red = 0.45F;
+                    green = 0.92F;
+                    blue = 0.72F;
+                } else {
+                    red = 0.38F;
+                    green = 0.74F;
+                    blue = 1.0F;
+                }
+
+                LevelRenderer.renderLineBox(
+                        poses,
+                        lines,
+                        item.getBoundingBox().inflate(0.11D).move(-camera.x, -camera.y, -camera.z),
+                        red,
+                        green,
+                        blue,
+                        pulse
+                );
+            }
+
+            // Flush before restoring depth so the ESP batch is actually drawn
+            // under the state selected above.
+            buffers.endBatch(lineType);
+        } finally {
+            RenderSystem.depthMask(true);
+            RenderSystem.enableDepthTest();
+            RenderSystem.disableBlend();
         }
-
-        buffers.endBatch(LOOT_LINES);
     }
 }
