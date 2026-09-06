@@ -24,9 +24,7 @@ public final class MessageConfig {
     private boolean loaded;
 
     private MessageConfig() {
-        for (int i = 0; i < names.length; i++) names[i] = defaultName(i);
-        Arrays.fill(messages, "");
-        Arrays.fill(keyCodes, -1);
+        resetDefaults();
     }
 
     public static MessageConfig getInstance() {
@@ -127,15 +125,39 @@ public final class MessageConfig {
                     keyCodes[i] = duplicate ? -1 : key;
                 }
             }
+
+            // Old/manual configs could assign a CopyL slot to a global Lclient
+            // control. Runtime correctly suppresses those keys, but leaving the
+            // binding visible makes the slot appear broken. Repair it on load.
+            if (clearReservedConflicts(LClientConfig.get())) save();
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(CONFIG_PATH);
             System.err.println("[Lclient/CopyL] No se pudo leer " + CONFIG_PATH + ": " + exception.getMessage()
                     + (backup == null ? "" : " · copia: " + backup));
-            for (int i = 0; i < names.length; i++) names[i] = defaultName(i);
-            Arrays.fill(messages, "");
-            Arrays.fill(keyCodes, -1);
+            resetDefaults();
             save();
         }
+    }
+
+    private boolean clearReservedConflicts(LClientConfig config) {
+        boolean changed = false;
+        for (int i = 0; i < keyCodes.length; i++) {
+            int key = keyCodes[i];
+            if (key >= 0 && (key == config.wheelKey
+                    || key == config.lootEspToggleKey
+                    || key == config.reconZoomKey
+                    || key == config.reconWaypointKey)) {
+                keyCodes[i] = -1;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private void resetDefaults() {
+        for (int i = 0; i < names.length; i++) names[i] = defaultName(i);
+        Arrays.fill(messages, "");
+        Arrays.fill(keyCodes, -1);
     }
 
     private static int sanitizeKey(int key) {
