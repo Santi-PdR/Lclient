@@ -7,13 +7,7 @@ import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.Method;
 
-/**
- * Reflection-only boundary around JourneyMap.
- *
- * Keeping JourneyMap API types out of the rest of Lclient means the client can
- * still start normally when JourneyMap is missing or when its plugin has not
- * finished initializing yet.
- */
+/** Reflection-only boundary around optional JourneyMap integration. */
 public final class JourneyMapBridge {
     private static final String PLUGIN_CLASS = "com.santipdr.copyl.client.integration.LClientJourneyMapPlugin";
 
@@ -31,16 +25,6 @@ public final class JourneyMapBridge {
     public static boolean isReady() {
         Object result = invoke("isReady", new Class<?>[0]);
         return result instanceof Boolean value && value;
-    }
-
-    public static void markAttacker(BlockPos pos, String name, ResourceKey<Level> dimension) {
-        invoke(
-                "markAttacker",
-                new Class<?>[]{BlockPos.class, String.class, ResourceKey.class},
-                pos,
-                name,
-                dimension
-        );
     }
 
     public static void markRecon(BlockPos pos, ResourceKey<Level> dimension) {
