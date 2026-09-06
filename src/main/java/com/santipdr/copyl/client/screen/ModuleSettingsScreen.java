@@ -1,7 +1,9 @@
 package com.santipdr.copyl.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.santipdr.copyl.client.CopyLKeyMappings;
 import com.santipdr.copyl.client.LClientConfig;
+import com.santipdr.copyl.client.MessageConfig;
 import com.santipdr.copyl.client.integration.JourneyMapBridge;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -29,6 +31,8 @@ public final class ModuleSettingsScreen extends Screen {
     private Button actionButton;
     private Button quaternaryButton;
     private CaptureTarget captureTarget = CaptureTarget.NONE;
+    private String keyWarning = "";
+    private long keyWarningUntil;
 
     public ModuleSettingsScreen(Screen parent, LClientWheelScreen.Module module) {
         super(Component.literal(module.title));
@@ -251,6 +255,17 @@ public final class ModuleSettingsScreen extends Screen {
 
             int newKey = (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) ? -1 : keyCode;
             LClientConfig config = LClientConfig.get();
+
+            if (newKey >= 0 && conflictsWithReservedKey(newKey, config)) {
+                keyWarning = "Esa tecla ya está reservada por otro control de Lclient.";
+                keyWarningUntil = System.currentTimeMillis() + 3200L;
+                captureTarget = CaptureTarget.NONE;
+                refreshLabels();
+                return true;
+            }
+
+            if (newKey >= 0) clearCopyLConflict(newKey);
+
             if (captureTarget == CaptureTarget.LOOT_TOGGLE) config.lootEspToggleKey = newKey;
             else if (captureTarget == CaptureTarget.RECON_ZOOM) config.reconZoomKey = newKey;
             else if (captureTarget == CaptureTarget.RECON_WAYPOINT) config.reconWaypointKey = newKey;
@@ -260,6 +275,28 @@ public final class ModuleSettingsScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean conflictsWithReservedKey(int newKey, LClientConfig config) {
+        if (newKey == config.wheelKey) return true;
+        return switch (captureTarget) {
+            case LOOT_TOGGLE -> newKey == config.reconZoomKey || newKey == config.reconWaypointKey;
+            case RECON_ZOOM -> newKey == config.lootEspToggleKey || newKey == config.reconWaypointKey;
+            case RECON_WAYPOINT -> newKey == config.lootEspToggleKey || newKey == config.reconZoomKey;
+            default -> false;
+        };
+    }
+
+    private static void clearCopyLConflict(int newKey) {
+        MessageConfig messages = MessageConfig.getInstance();
+        boolean changed = false;
+        for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
+            if (messages.getKeyCode(i) == newKey) {
+                messages.setKeyCode(i, -1);
+                changed = true;
+            }
+        }
+        if (changed) messages.save();
     }
 
     @Override
@@ -280,6 +317,10 @@ public final class ModuleSettingsScreen extends Screen {
             case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
         };
         graphics.drawCenteredString(font, info, width / 2, 60, 0xFF8193A4);
+
+        if (!keyWarning.isBlank() && System.currentTimeMillis() <= keyWarningUntil) {
+            graphics.drawCenteredString(font, keyWarning, width / 2, height - 18, 0xFFFFB28A);
+        }
 
         super.render(graphics, mouseX, mouseY, partialTick);
     }
