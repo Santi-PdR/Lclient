@@ -130,7 +130,7 @@ public final class FoodSelectionScreen extends Screen {
             if (id == null) continue;
             FoodChoice existing = unique.get(id);
             if (existing == null) {
-                unique.put(id, new FoodChoice(id.toString(), stack.getHoverName().getString(), stack.getCount()));
+                unique.put(id, new FoodChoice(id.toString(), safeStackName(stack, id), stack.getCount()));
             } else {
                 existing.count += stack.getCount();
             }
@@ -194,7 +194,7 @@ public final class FoodSelectionScreen extends Screen {
         }
         if (!usable) {
             ItemStack defaultStack = new ItemStack(item);
-            usable = defaultStack.isEdible() && safeFoodProperties(defaultStack, eater) != null;
+            usable = isUsableFoodStack(defaultStack, eater);
         }
 
         if (!usable) {
@@ -205,14 +205,30 @@ public final class FoodSelectionScreen extends Screen {
     }
 
     private static boolean isUsableFoodStack(ItemStack stack, LivingEntity eater) {
-        return !stack.isEmpty() && stack.isEdible() && safeFoodProperties(stack, eater) != null;
+        try {
+            return stack != null
+                    && !stack.isEmpty()
+                    && stack.isEdible()
+                    && stack.getFoodProperties(eater) != null;
+        } catch (RuntimeException | LinkageError ignored) {
+            return false;
+        }
     }
 
     private static FoodProperties safeFoodProperties(ItemStack stack, LivingEntity eater) {
         try {
             return stack.getFoodProperties(eater);
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException | LinkageError ignored) {
             return null;
+        }
+    }
+
+    private static String safeStackName(ItemStack stack, ResourceLocation fallbackId) {
+        try {
+            String name = stack.getHoverName().getString();
+            return name == null || name.isBlank() ? fallbackId.toString() : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return fallbackId.toString();
         }
     }
 
@@ -221,7 +237,7 @@ public final class FoodSelectionScreen extends Screen {
         ResourceLocation id = ResourceLocation.tryParse(idText);
         if (id == null) return idText;
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
-        return item == null ? idText : new ItemStack(item).getHoverName().getString();
+        return item == null ? idText : safeStackName(new ItemStack(item), id);
     }
 
     private void rebuildScreen() {
