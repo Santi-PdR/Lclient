@@ -27,11 +27,12 @@ public final class JourneyMapBridge {
         return result instanceof Boolean value && value;
     }
 
-    public static void markRecon(BlockPos pos, ResourceKey<Level> dimension) {
+    public static void markRecon(BlockPos pos, String label, ResourceKey<Level> dimension) {
         invoke(
                 "markRecon",
-                new Class<?>[]{BlockPos.class, ResourceKey.class},
+                new Class<?>[]{BlockPos.class, String.class, ResourceKey.class},
                 pos,
+                label,
                 dimension
         );
     }

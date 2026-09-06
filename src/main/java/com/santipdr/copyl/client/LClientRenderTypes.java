@@ -9,21 +9,21 @@ import java.util.OptionalDouble;
 /**
  * Lclient-owned render types.
  *
- * RenderType exposes its state shards as protected members specifically for
- * subclasses. Keeping them here avoids global GL state hacks and gives Loot
- * ESP a real no-depth line pass.
+ * Loot ESP uses a dedicated color-only line pass with NO_DEPTH_TEST. This
+ * means terrain depth never hides its geometry and the pass cannot mutate the
+ * glow state of ItemEntity or leak global GL state into other mods.
  */
 public final class LClientRenderTypes extends RenderType {
     private static final RenderType LOOT_ESP_LINES = create(
-            "lclient_loot_esp_lines",
+            "lclient_loot_esp_lines_xray",
             DefaultVertexFormat.POSITION_COLOR_NORMAL,
             VertexFormat.Mode.LINES,
-            512,
+            1024,
             false,
             false,
             CompositeState.builder()
                     .setShaderState(RENDERTYPE_LINES_SHADER)
-                    .setLineState(new LineStateShard(OptionalDouble.empty()))
+                    .setLineState(new LineStateShard(OptionalDouble.of(2.0D)))
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .setDepthTestState(NO_DEPTH_TEST)
                     .setCullState(NO_CULL)

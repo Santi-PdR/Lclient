@@ -5,6 +5,7 @@ import com.santipdr.copyl.CopyL;
 import com.santipdr.copyl.client.integration.JourneyMapBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -21,12 +22,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Tactical Recon controller.
- *
- * The zoom is render-only: it never mutates Minecraft's configured FOV, so a
- * crash or screen transition cannot leave the user's video setting changed.
- */
+/** Tactical Recon controller with render-only zoom and long-range client raycast. */
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class ReconController {
     private static boolean zoomActive;
@@ -80,7 +76,6 @@ public final class ReconController {
             setStatus("Zoom " + zoomText(Minecraft.getInstance(), next));
         }
 
-        // Recon owns the wheel while zoom is held, so the hotbar does not move.
         event.setCanceled(true);
     }
 
@@ -179,8 +174,21 @@ public final class ReconController {
             return;
         }
 
-        JourneyMapBridge.markRecon(position, minecraft.level.dimension());
-        setStatus("Waypoint: " + position.toShortString());
+        String label = targetLabel(minecraft, hit, position);
+        JourneyMapBridge.markRecon(position, label, minecraft.level.dimension());
+        setStatus("Waypoint · " + label + " · " + position.toShortString());
+    }
+
+    private static String targetLabel(Minecraft minecraft, HitResult hit, BlockPos position) {
+        if (hit instanceof EntityHitResult entityHit) {
+            Entity entity = entityHit.getEntity();
+            String name = entity.getName().getString();
+            return name.isBlank() ? BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath() : name;
+        }
+        if (minecraft.level != null && hit != null && hit.getType() == HitResult.Type.BLOCK) {
+            return BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(position).getBlock()).getPath();
+        }
+        return "Dirección";
     }
 
     private static void setStatus(String text) {
