@@ -13,9 +13,12 @@
   "key.copyl.slot.10": "Send quick message 10",
   "screen.copyl.title": "CopyL — Quick messages",
   "screen.copyl.subtitle": "Save up to 10 messages or commands and send them instantly with a key.",
-  "screen.copyl.controls_hint": "Assign keys in Options > Controls > CopyL. The current key is shown on each slot.",
-  "screen.copyl.slot": "Slot %s",
+  "screen.copyl.controls_hint": "Click each slot key to change it here. Backspace/Delete leaves it unassigned.",
+  "screen.copyl.slot": "Message %s",
   "screen.copyl.placeholder": "Write a message or /command...",
   "screen.copyl.save": "Save and close",
-  "screen.copyl.controls": "Open Controls"
+  "screen.copyl.controls": "Advanced controls",
+  "screen.copyl.key.waiting": "PRESS KEY",
+  "screen.copyl.key.capture": "Editing message %s key — press a key, Esc cancels",
+  "screen.copyl.key.tooltip": "Click to change this key. Mouse buttons are supported too."
 }

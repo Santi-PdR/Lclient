@@ -1,37 +1,41 @@
 # CopyL
 
-CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 que permite guardar y enviar rápidamente hasta 10 mensajes o comandos mediante teclas configurables.
+Mod **100% client-side** para Minecraft Forge 1.20.1 que permite guardar y enviar rápidamente hasta 10 mensajes o comandos mediante teclas configurables.
 
-## Funciones
+## CopyL 1.2.0
 
-- 10 espacios de mensajes independientes.
-- Cada espacio aparece en **Opciones → Controles → CopyL — Mensajes rápidos** y puede tener su propia tecla.
-- Los 10 atajos empiezan sin tecla asignada para evitar conflictos.
-- `-` abre por defecto la interfaz de edición de CopyL.
-- El editor muestra junto a cada espacio la tecla que tiene asignada actualmente.
-- Desde el editor puedes abrir directamente la pantalla de Controles.
-- También puedes abrir el editor desde **Mods → CopyL → Config**.
-- Cada espacio admite hasta 256 caracteres.
-- Texto normal se envía al chat exactamente como fue escrito, por ejemplo `**Congelar**`.
+- 10 mensajes rápidos independientes.
+- Cada mensaje tiene su propio keybind.
+- La tecla y el texto se pueden editar **directamente desde la pantalla de CopyL**.
+- También siguen disponibles en **Opciones → Controles → CopyL**.
+- `-` abre por defecto el editor.
+- `Backspace` o `Delete` mientras editas una tecla la deja sin asignar.
+- `Esc` cancela la captura de una tecla.
+- Se admiten botones del ratón como keybind.
+- Interfaz con animaciones suaves de entrada y hover.
+- Feedback sonoro al pasar por slots y confirmar cambios.
+- Texto normal se envía al chat tal cual fue escrito.
 - Si el contenido empieza con `/`, se envía como comando.
-- Los mensajes se guardan localmente en `config/copyl-messages.json`.
+- Hasta 256 caracteres por mensaje.
+- Los mensajes se guardan en `config/copyl-messages.json`.
+- Los keybinds se guardan mediante las opciones normales de Minecraft.
+- Acceso desde **Mods → CopyL → Config**.
 - No requiere instalar CopyL en el servidor.
-- Los atajos no se disparan mientras hay otra pantalla abierta, evitando mensajes accidentales al escribir en chat, inventario o menús.
 
-## Cómo se usa
+## Uso
 
 1. Instala el JAR en la carpeta `mods` de tu cliente Forge 1.20.1.
-2. Entra a **Opciones → Controles → CopyL — Mensajes rápidos**.
-3. Asigna una tecla a los espacios que quieras utilizar.
-4. Dentro de un mundo o servidor, pulsa `-` para abrir el editor.
-5. Escribe un mensaje normal o un `/comando` en cada espacio.
-6. Guarda y pulsa la tecla asignada para enviarlo automáticamente.
+2. Entra a un mundo o servidor.
+3. Pulsa `-` para abrir CopyL.
+4. Escribe el contenido de cada mensaje.
+5. Pulsa el botón de tecla del mismo slot y luego la tecla que quieras asignar.
+6. Guarda y cierra.
+7. Al pulsar esa tecla durante el juego, CopyL envía el mensaje automáticamente.
 
-La propia pantalla de CopyL muestra qué tecla corresponde a cada espacio para que no tengas que memorizarlo.
+Ejemplos:
 
-## Acceso desde la lista de Mods
-
-En **Mods → CopyL** aparece una descripción completa del funcionamiento del mod. El botón **Config** abre directamente el editor de mensajes rápidos.
+- `**Congelar**` → se envía como mensaje.
+- `/spawn` → se envía como comando.
 
 ## Requisitos
 
@@ -55,4 +59,4 @@ Linux/macOS:
 ./gradlew build
 ```
 
-En la primera ejecución el script obtiene automáticamente el pequeño `gradle-wrapper.jar` oficial de Gradle 8.1.1 si todavía no existe. El JAR final queda en `build/libs/`.
+El JAR final queda en `build/libs/`.

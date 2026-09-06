@@ -13,9 +13,12 @@
   "key.copyl.slot.10": "Enviar mensaje rápido 10",
   "screen.copyl.title": "CopyL — Mensajes rápidos",
   "screen.copyl.subtitle": "Guarda hasta 10 mensajes o comandos y envíalos al instante con una tecla.",
-  "screen.copyl.controls_hint": "Asigna las teclas en Opciones > Controles > CopyL. La tecla actual aparece en cada espacio.",
-  "screen.copyl.slot": "Espacio %s",
+  "screen.copyl.controls_hint": "Haz clic en la tecla de cada espacio para cambiarla aquí mismo. Backspace/Delete la deja sin asignar.",
+  "screen.copyl.slot": "Mensaje %s",
   "screen.copyl.placeholder": "Escribe un mensaje o /comando...",
   "screen.copyl.save": "Guardar y cerrar",
-  "screen.copyl.controls": "Abrir Controles"
+  "screen.copyl.controls": "Controles avanzados",
+  "screen.copyl.key.waiting": "PULSA TECLA",
+  "screen.copyl.key.capture": "Editando tecla del mensaje %s — pulsa una tecla, Esc cancela",
+  "screen.copyl.key.tooltip": "Haz clic para cambiar esta tecla. También acepta botones del ratón."
 }
