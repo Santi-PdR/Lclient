@@ -14,6 +14,8 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,6 +27,14 @@ import java.util.List;
  */
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class LootEspRenderer {
+    private static final long SCAN_INTERVAL_MS = 100L;
+
+    private static Object cachedLevel;
+    private static List<ItemEntity> cachedItems = Collections.emptyList();
+    private static long nextScanAt;
+    private static int cachedRange = -1;
+    private static int cachedMinStack = -1;
+
     private LootEspRenderer() {
     }
 
@@ -41,26 +51,29 @@ public final class LootEspRenderer {
             return;
         }
 
+        refreshCacheIfNeeded(minecraft, config);
+        if (cachedItems.isEmpty()) return;
+
         double range = config.lootEspRange;
         double rangeSq = range * range;
-        List<ItemEntity> items = minecraft.level.getEntitiesOfClass(
-                ItemEntity.class,
-                minecraft.player.getBoundingBox().inflate(range),
-                item -> !item.isRemoved()
-                        && !item.getItem().isEmpty()
-                        && item.getItem().getCount() >= config.lootEspMinStack
-                        && item.distanceToSqr(minecraft.player) <= rangeSq
-        );
-        if (items.isEmpty()) return;
-
         var camera = event.getCamera().getPosition();
         PoseStack poses = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         RenderType lineType = LClientRenderTypes.lootEspLines();
         VertexConsumer lines = buffers.getBuffer(lineType);
         float pulse = 0.80F + 0.20F * (float) Math.sin(System.currentTimeMillis() / 190.0D);
+        boolean drewAnything = false;
 
-        for (ItemEntity item : items) {
+        for (ItemEntity item : cachedItems) {
+            if (item == null
+                    || item.isRemoved()
+                    || item.getItem().isEmpty()
+                    || item.getItem().getCount() < config.lootEspMinStack
+                    || item.distanceToSqr(minecraft.player) > rangeSq) {
+                continue;
+            }
+
+            drewAnything = true;
             int count = item.getItem().getCount();
             float[] color = colorForStack(count);
 
@@ -99,7 +112,31 @@ public final class LootEspRenderer {
             }
         }
 
-        buffers.endBatch(lineType);
+        if (drewAnything) buffers.endBatch(lineType);
+    }
+
+    private static void refreshCacheIfNeeded(Minecraft minecraft, LClientConfig config) {
+        long now = System.currentTimeMillis();
+        boolean levelChanged = cachedLevel != minecraft.level;
+        boolean settingsChanged = cachedRange != config.lootEspRange || cachedMinStack != config.lootEspMinStack;
+        if (!levelChanged && !settingsChanged && now < nextScanAt) return;
+
+        cachedLevel = minecraft.level;
+        cachedRange = config.lootEspRange;
+        cachedMinStack = config.lootEspMinStack;
+        nextScanAt = now + SCAN_INTERVAL_MS;
+
+        double range = config.lootEspRange;
+        double rangeSq = range * range;
+        List<ItemEntity> found = minecraft.level.getEntitiesOfClass(
+                ItemEntity.class,
+                minecraft.player.getBoundingBox().inflate(range),
+                item -> !item.isRemoved()
+                        && !item.getItem().isEmpty()
+                        && item.getItem().getCount() >= config.lootEspMinStack
+                        && item.distanceToSqr(minecraft.player) <= rangeSq
+        );
+        cachedItems = found.isEmpty() ? Collections.emptyList() : new ArrayList<>(found);
     }
 
     private static float[] colorForStack(int count) {
