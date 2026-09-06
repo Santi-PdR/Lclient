@@ -57,10 +57,6 @@ public final class CopyLClientEvents {
             return;
         }
 
-        // Disabling Smart Offhand must restore the managed item even while a
-        // Lclient screen is still open. If restoration is temporarily unsafe
-        // (for example because the carried cursor stack is occupied), keep the
-        // transaction alive and retry on the next tick instead of forgetting it.
         if (!config.smartOffhand) {
             restoreManagedOffhandWhenDisabling(minecraft);
             return;
@@ -81,15 +77,11 @@ public final class CopyLClientEvents {
     private static void pollWheelKey(Minecraft minecraft, LClientConfig config) {
         int key = config.wheelKey;
         boolean down = keyDown(minecraft, key);
-
-        // Rebinding while the new key is already held should arm the new key,
-        // not open the wheel on the next tick.
         if (observedWheelKey != key) {
             observedWheelKey = key;
             wheelKeyDown = down;
             return;
         }
-
         if (down && !wheelKeyDown && minecraft.screen == null) {
             minecraft.setScreen(new LClientWheelScreen(null));
         }
@@ -99,13 +91,11 @@ public final class CopyLClientEvents {
     private static void pollLootEspToggle(Minecraft minecraft, LClientConfig config) {
         int key = config.lootEspToggleKey;
         boolean down = keyDown(minecraft, key);
-
         if (observedLootEspToggleKey != key) {
             observedLootEspToggleKey = key;
             lootEspToggleKeyDown = down;
             return;
         }
-
         if (down && !lootEspToggleKeyDown
                 && minecraft.screen == null
                 && minecraft.player != null
@@ -209,7 +199,11 @@ public final class CopyLClientEvents {
 
         int foodLevel = player.getFoodData().getFoodLevel();
         if (!smartOffhandActive) {
-            if (foodLevel > config.foodThreshold || player.getOffhandItem().isEdible() || player.isUsingItem()) return;
+            if (foodLevel > config.foodThreshold
+                    || isUsableFoodStack(player.getOffhandItem(), player)
+                    || player.isUsingItem()) {
+                return;
+            }
 
             int source = findFoodSlot(player, config);
             if (source < 0) return;
@@ -219,18 +213,13 @@ public final class CopyLClientEvents {
             ItemStack inserted = player.getOffhandItem().copy();
             ItemStack sourceAfterSwap = player.getInventory().getItem(source);
 
-            if (!inserted.isEmpty()
-                    && inserted.isEdible()
-                    && safeFoodProperties(inserted, player) != null
+            if (isUsableFoodStack(inserted, player)
                     && stackExactlyMatches(sourceAfterSwap, original)) {
                 smartFoodSourceSlot = source;
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
                 smartOffhandActive = true;
             } else {
-                // Reverse only when the source still contains exactly what the
-                // swap put there; otherwise another inventory mutation won the
-                // race and touching it again would be unsafe.
                 if (stackExactlyMatches(sourceAfterSwap, original)
                         && !ItemStack.isSameItemSameTags(player.getOffhandItem(), original)) {
                     swapInventoryWithOffhand(minecraft, source);
@@ -267,9 +256,6 @@ public final class CopyLClientEvents {
             clearSmartOffhandState();
             return;
         }
-
-        // These are transient conditions: do not abandon the original offhand
-        // item. A later tick can restore it safely once the cursor/menu settles.
         if (minecraft.gameMode == null || !player.inventoryMenu.getCarried().isEmpty()) return;
 
         if (!canSafelyRestore(player)) {
@@ -313,7 +299,7 @@ public final class CopyLClientEvents {
         int bestCount = -1;
         for (int i = 0; i < 36; i++) {
             ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty() || !stack.isEdible() || safeFoodProperties(stack, player) == null) continue;
+            if (!isUsableFoodStack(stack, player)) continue;
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (!wanted.equals(id)) continue;
             if (stack.getCount() > bestCount) {
@@ -330,7 +316,7 @@ public final class CopyLClientEvents {
 
         for (int i = 0; i < 36; i++) {
             ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty() || !stack.isEdible()) continue;
+            if (!isUsableFoodStack(stack, player)) continue;
 
             FoodProperties food = safeFoodProperties(stack, player);
             if (food == null) continue;
@@ -349,10 +335,21 @@ public final class CopyLClientEvents {
         return bestSlot;
     }
 
+    private static boolean isUsableFoodStack(ItemStack stack, Player player) {
+        try {
+            return stack != null
+                    && !stack.isEmpty()
+                    && stack.isEdible()
+                    && stack.getFoodProperties(player) != null;
+        } catch (RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
     private static FoodProperties safeFoodProperties(ItemStack stack, Player player) {
         try {
             return stack.getFoodProperties(player);
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException | LinkageError ignored) {
             return null;
         }
     }
