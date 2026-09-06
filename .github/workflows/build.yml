@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,9 +25,64 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
+      - name: Select mod jar
+        id: jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' \
+            ! -name '*sources*' \
+            ! -name '*javadoc*' \
+            ! -name '*slim*' \
+            ! -name '*plain*' | head -n 1)"
+
+          if [ -z "$JAR" ]; then
+            echo "No final mod JAR found in build/libs" >&2
+            exit 1
+          fi
+
+          cp "$JAR" /tmp/copyl-latest.jar
+          echo "jar_path=$JAR" >> "$GITHUB_OUTPUT"
+
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
           name: CopyL
-          path: build/libs/*.jar
+          path: ${{ steps.jar.outputs.jar_path }}
           if-no-files-found: error
+
+      - name: Publish latest installer payload
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(grep -E '^version = ' build.gradle | sed -E "s/version = ['\"]([^'\"]+)['\"]/\1/")"
+          SHA256="$(sha256sum /tmp/copyl-latest.jar | awk '{print $1}')"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin build-output >/dev/null 2>&1; then
+            git fetch origin build-output:build-output
+            git checkout build-output
+          else
+            git checkout --orphan build-output
+            git rm -rf . || true
+          fi
+
+          base64 -w 0 /tmp/copyl-latest.jar > copyl-latest.jar.b64
+          printf '\n' >> copyl-latest.jar.b64
+          printf '%s\n' "$VERSION" > version.txt
+          printf '%s\n' "$SHA256" > sha256.txt
+          printf '%s\n' "${GITHUB_SHA}" > source-commit.txt
+
+          git add copyl-latest.jar.b64 version.txt sha256.txt source-commit.txt
+
+          if git diff --cached --quiet; then
+            echo "Published payload is already current."
+            exit 0
+          fi
+
+          git commit -m "build: publish CopyL ${VERSION} [skip ci]"
+          git push origin build-output
