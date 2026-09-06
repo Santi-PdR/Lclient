@@ -11,12 +11,15 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class CopyLClientEvents {
+    private static final int MAX_OUTGOING_MESSAGE_LENGTH = 256;
+
     private static final boolean[] messageKeyDown = new boolean[CopyLKeyMappings.SLOT_COUNT];
     private static boolean wheelKeyDown;
     private static boolean lootEspToggleKeyDown;
@@ -46,6 +49,15 @@ public final class CopyLClientEvents {
         }
 
         if (minecraft.screen == null) handleSmartOffhand(minecraft, config);
+    }
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        // Forge fires this while the local player/game mode are still available.
+        // Best effort: restore the managed swap before the connection disappears.
+        if (smartOffhandActive) restoreManagedOffhandWhenDisabling(minecraft);
+        resetTransientKeys();
     }
 
     private static void pollWheelKey(Minecraft minecraft, LClientConfig config) {
@@ -97,6 +109,11 @@ public final class CopyLClientEvents {
         if (message.isBlank()) return;
 
         message = expandQuickMessage(message, minecraft.player);
+        if (message.length() > MAX_OUTGOING_MESSAGE_LENGTH) {
+            message = message.substring(0, MAX_OUTGOING_MESSAGE_LENGTH);
+        }
+        if (message.isBlank()) return;
+
         if (message.startsWith("/") && message.length() > 1) {
             minecraft.player.connection.sendCommand(message.substring(1));
         } else {
@@ -243,6 +260,7 @@ public final class CopyLClientEvents {
     }
 
     private static void swapInventoryWithOffhand(Minecraft minecraft, int inventoryIndex) {
+        if (minecraft.player == null || minecraft.gameMode == null) return;
         int menuSlot = inventoryIndex < 9 ? 36 + inventoryIndex : inventoryIndex;
         int containerId = minecraft.player.inventoryMenu.containerId;
         minecraft.gameMode.handleInventoryMouseClick(containerId, menuSlot, 0, ClickType.PICKUP, minecraft.player);
@@ -255,6 +273,12 @@ public final class CopyLClientEvents {
         smartOffhandActive = false;
         smartOriginalOffhand = ItemStack.EMPTY;
         smartInsertedFood = ItemStack.EMPTY;
+    }
+
+    private static void resetTransientKeys() {
+        wheelKeyDown = false;
+        lootEspToggleKeyDown = false;
+        for (int i = 0; i < messageKeyDown.length; i++) messageKeyDown[i] = false;
     }
 
     private static boolean keyDown(Minecraft minecraft, int keyCode) {
