@@ -12,6 +12,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,16 +25,25 @@ public final class FoodSelectionScreen extends Screen {
     private final List<FoodChoice> foods = new ArrayList<>();
     private EditBox idField;
     private int page;
-    private String feedback = "";
+    private String feedback;
 
     public FoodSelectionScreen(Screen parent) {
+        this(parent, 0, "");
+    }
+
+    private FoodSelectionScreen(Screen parent, int page, String feedback) {
         super(Component.literal("Smart Offhand — Comida"));
         this.parent = parent;
+        this.page = Math.max(0, page);
+        this.feedback = feedback == null ? "" : feedback;
     }
 
     @Override
     protected void init() {
         rebuildFoods();
+        int maxPage = foods.isEmpty() ? 0 : (foods.size() - 1) / PAGE_SIZE;
+        page = Math.min(page, maxPage);
+
         int cx = width / 2;
         int startY = 58;
 
@@ -65,14 +75,15 @@ public final class FoodSelectionScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("◀"), b -> {
             if (page > 0) {
                 page--;
+                feedback = "";
                 rebuildScreen();
             }
         }).bounds(cx - 150, pagerY, 46, 20).build()).active = page > 0;
 
-        int maxPage = foods.isEmpty() ? 0 : (foods.size() - 1) / PAGE_SIZE;
         addRenderableWidget(Button.builder(Component.literal("▶"), b -> {
             if (page < maxPage) {
                 page++;
+                feedback = "";
                 rebuildScreen();
             }
         }).bounds(cx + 104, pagerY, 46, 20).build()).active = page < maxPage;
@@ -109,7 +120,13 @@ public final class FoodSelectionScreen extends Screen {
                 existing.count += stack.getCount();
             }
         }
+
         foods.addAll(unique.values());
+        String selectedId = LClientConfig.get().smartOffhandFoodId;
+        foods.sort(Comparator
+                .comparing((FoodChoice choice) -> !choice.id.equals(selectedId))
+                .thenComparing((FoodChoice choice) -> -choice.count)
+                .thenComparing(choice -> choice.name, String.CASE_INSENSITIVE_ORDER));
     }
 
     private void select(String id) {
@@ -160,7 +177,7 @@ public final class FoodSelectionScreen extends Screen {
     }
 
     private void rebuildScreen() {
-        if (minecraft != null) minecraft.setScreen(new FoodSelectionScreen(parent));
+        if (minecraft != null) minecraft.setScreen(new FoodSelectionScreen(parent, page, feedback));
     }
 
     @Override
