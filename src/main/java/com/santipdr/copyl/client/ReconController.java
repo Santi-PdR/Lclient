@@ -79,14 +79,17 @@ public final class ReconController {
             invalidateTargetCache();
         }
         if (wasZoomActive && !zoomActive) {
-            // Persist the final wheel-selected zoom as soon as Recon is released
-            // instead of risking the last debounce window during shutdown/logout.
             flushZoomConfigIfDue(config, true);
         }
 
-        boolean waypointDown = canUseRecon && keyDown(minecraft, config.reconWaypointKey);
-        if (zoomActive && waypointDown && !waypointKeyDown) createWaypoint(minecraft, config);
-        waypointKeyDown = waypointDown;
+        // Always mirror the physical waypoint key, including while a GUI is
+        // open. Otherwise closing a menu with Zoom+Waypoint held looks like a
+        // new waypoint press on the first gameplay tick.
+        boolean physicalWaypointDown = keyDown(minecraft, config.reconWaypointKey);
+        if (canUseRecon && zoomActive && physicalWaypointDown && !waypointKeyDown) {
+            createWaypoint(minecraft, config);
+        }
+        waypointKeyDown = physicalWaypointDown;
     }
 
     @SubscribeEvent
@@ -219,7 +222,6 @@ public final class ReconController {
     }
 
     private static void createWaypoint(Minecraft minecraft, LClientConfig config) {
-        // User action must never use a stale HUD cache entry.
         HitResult hit = getTargetHit(minecraft, true);
         BlockPos position = targetBlockPos(hit);
         if (position == null) {
