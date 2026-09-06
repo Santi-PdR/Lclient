@@ -30,7 +30,7 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
-      - name: Select mod jar
+      - name: Select and validate mod jar
         id: jar
         shell: bash
         run: |
@@ -43,9 +43,18 @@ jobs:
             find build/libs -maxdepth 1 -type f -printf '  %f\n' >&2 || true
             exit 1
           fi
+
+          unzip -t "$JAR" >/dev/null
+          unzip -l "$JAR" | grep -q 'META-INF/mods.toml'
+          unzip -l "$JAR" | grep -q 'com/santipdr/copyl/CopyL.class'
+
           cp "$JAR" /tmp/lclient-latest.jar
+          SHA256="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
+          test -n "$SHA256"
+
           echo "jar_path=$JAR" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
@@ -61,15 +70,22 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ steps.jar.outputs.version }}"
-          SHA256="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
+          SHA256="${{ steps.jar.outputs.sha256 }}"
 
           # Never let an older main build overwrite a newer installer payload.
           REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           if [ "$REMOTE_MAIN" != "$GITHUB_SHA" ]; then
             echo "Skipping installer publication: this run is stale."
-            echo "Run SHA:    $GITHUB_SHA"
+            echo "Run SHA:      $GITHUB_SHA"
             echo "Current main: $REMOTE_MAIN"
             exit 0
+          fi
+
+          # Verify that the exact bytes validated above are still being published.
+          ACTUAL_SHA="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
+          if [ "$ACTUAL_SHA" != "$SHA256" ]; then
+            echo "Installer JAR changed after validation." >&2
+            exit 1
           fi
 
           git config user.name "github-actions[bot]"
