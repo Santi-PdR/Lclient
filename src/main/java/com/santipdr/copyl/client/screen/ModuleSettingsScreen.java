@@ -230,7 +230,12 @@ public final class ModuleSettingsScreen extends Screen {
         if (id == null) return idText;
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
         if (item == null) return idText;
-        return new ItemStack(item).getHoverName().getString();
+        try {
+            String name = new ItemStack(item).getHoverName().getString();
+            return name == null || name.isBlank() ? idText : name;
+        } catch (RuntimeException | LinkageError ignored) {
+            return idText;
+        }
     }
 
     private boolean isEnabled() {
