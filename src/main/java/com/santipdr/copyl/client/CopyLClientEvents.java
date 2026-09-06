@@ -242,7 +242,7 @@ public final class CopyLClientEvents {
             FoodProperties food = stack.getItem().getFoodProperties();
             float score = stack.getCount();
             if (food != null) {
-                score += food.getNutrition() * 20.0F + food.getSaturationMod() * 10.0F;
+                score += food.getNutrition() * 20.0F;
             }
 
             if (score > bestScore) {
@@ -272,7 +272,7 @@ public final class CopyLClientEvents {
 
             boolean shouldGlow = config.lootEsp && minecraft.player.distanceToSqr(item) <= maxDistanceSq;
             if (shouldGlow) {
-                glowingLootOriginal.putIfAbsent(id, item.isGlowing());
+                glowingLootOriginal.putIfAbsent(id, item.isCurrentlyGlowing());
                 item.setGlowingTag(true);
             } else if (glowingLootOriginal.containsKey(id)) {
                 item.setGlowingTag(glowingLootOriginal.remove(id));
