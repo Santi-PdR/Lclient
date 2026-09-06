@@ -6,12 +6,17 @@ import com.santipdr.copyl.client.integration.JourneyMapBridge;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 public final class ModuleSettingsScreen extends Screen {
     private enum CaptureTarget {
         NONE,
+        LOOT_TOGGLE,
         RECON_ZOOM,
         RECON_WAYPOINT
     }
@@ -88,6 +93,10 @@ public final class ModuleSettingsScreen extends Screen {
     private Component actionLabel() {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
+            case LOOT_ESP -> Component.literal(captureTarget == CaptureTarget.LOOT_TOGGLE
+                    ? "PULSA LA TECLA PARA LOOT ESP"
+                    : "Tecla activar/desactivar: " + keyName(c.lootEspToggleKey));
+            case SMART_OFFHAND -> Component.literal("Comida elegida: " + smartFoodName(c.smartOffhandFoodId));
             case RECON -> Component.literal("Alcance del raycast: " + c.reconRange + " m");
             case JOURNEYMAP -> Component.literal("Limpiar waypoint táctico de Lclient");
             default -> Component.literal("");
@@ -96,16 +105,19 @@ public final class ModuleSettingsScreen extends Screen {
 
     private Component quaternaryLabel() {
         LClientConfig c = LClientConfig.get();
-        return module == LClientWheelScreen.Module.RECON
-                ? Component.literal("Zoom guardado: FOV " + c.reconZoomFov + " (la rueda lo cambia en vivo)")
-                : Component.literal("");
+        return switch (module) {
+            case LOOT_ESP -> Component.literal("Marcador vertical tras paredes: " + yesNo(c.lootEspBeacon));
+            case SMART_OFFHAND -> Component.literal("Si falta la elegida, usar AUTO: " + yesNo(c.smartOffhandFallbackToAuto));
+            case RECON -> Component.literal("Zoom guardado: FOV " + c.reconZoomFov + " (rueda en vivo)");
+            default -> Component.literal("");
+        };
     }
 
     private void secondaryAction() {
         LClientConfig c = LClientConfig.get();
         switch (module) {
             case LOOT_ESP -> c.lootEspRange = cycle(c.lootEspRange, 32, 64, 96, 128, 160, 192);
-            case SMART_OFFHAND -> c.foodThreshold = cycle(c.foodThreshold, 8, 12, 14, 16);
+            case SMART_OFFHAND -> c.foodThreshold = cycle(c.foodThreshold, 8, 10, 12, 14, 16);
             case RECON -> captureTarget = CaptureTarget.RECON_ZOOM;
             case JOURNEYMAP -> c.journeyMapReconWaypoint = !c.journeyMapReconWaypoint;
             default -> { }
@@ -128,19 +140,31 @@ public final class ModuleSettingsScreen extends Screen {
 
     private void action() {
         LClientConfig c = LClientConfig.get();
-        if (module == LClientWheelScreen.Module.RECON) {
+        if (module == LClientWheelScreen.Module.LOOT_ESP) {
+            captureTarget = CaptureTarget.LOOT_TOGGLE;
+        } else if (module == LClientWheelScreen.Module.SMART_OFFHAND) {
+            if (minecraft != null) minecraft.setScreen(new FoodSelectionScreen(this));
+            return;
+        } else if (module == LClientWheelScreen.Module.RECON) {
             c.reconRange = cycle(c.reconRange, 128, 192, 256, 384, 512);
-            c.save();
         } else if (module == LClientWheelScreen.Module.JOURNEYMAP) {
             JourneyMapBridge.clearTacticalWaypoints();
         }
+        c.save();
         refreshLabels();
     }
 
     private void quaternaryAction() {
-        if (module != LClientWheelScreen.Module.RECON) return;
         LClientConfig c = LClientConfig.get();
-        c.reconZoomFov = cycle(c.reconZoomFov, 10, 16, 24, 32, 40, 50);
+        if (module == LClientWheelScreen.Module.LOOT_ESP) {
+            c.lootEspBeacon = !c.lootEspBeacon;
+        } else if (module == LClientWheelScreen.Module.SMART_OFFHAND) {
+            c.smartOffhandFallbackToAuto = !c.smartOffhandFallbackToAuto;
+        } else if (module == LClientWheelScreen.Module.RECON) {
+            c.reconZoomFov = cycle(c.reconZoomFov, 10, 16, 24, 32, 40, 50);
+        } else {
+            return;
+        }
         c.save();
         refreshLabels();
     }
@@ -160,9 +184,13 @@ public final class ModuleSettingsScreen extends Screen {
         tertiaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
                 || module == LClientWheelScreen.Module.SMART_OFFHAND
                 || module == LClientWheelScreen.Module.RECON;
-        actionButton.visible = module == LClientWheelScreen.Module.RECON
+        actionButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
+                || module == LClientWheelScreen.Module.SMART_OFFHAND
+                || module == LClientWheelScreen.Module.RECON
                 || module == LClientWheelScreen.Module.JOURNEYMAP;
-        quaternaryButton.visible = module == LClientWheelScreen.Module.RECON;
+        quaternaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
+                || module == LClientWheelScreen.Module.SMART_OFFHAND
+                || module == LClientWheelScreen.Module.RECON;
     }
 
     private static int cycle(int current, int... values) {
@@ -178,6 +206,15 @@ public final class ModuleSettingsScreen extends Screen {
 
     private String keyName(int key) {
         return key < 0 ? "Sin asignar" : InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
+    }
+
+    private static String smartFoodName(String idText) {
+        if (idText == null || idText.isBlank()) return "AUTO";
+        ResourceLocation id = ResourceLocation.tryParse(idText);
+        if (id == null) return idText;
+        Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+        if (item == null) return idText;
+        return new ItemStack(item).getHoverName().getString();
     }
 
     private boolean isEnabled() {
@@ -214,8 +251,9 @@ public final class ModuleSettingsScreen extends Screen {
 
             int newKey = (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE) ? -1 : keyCode;
             LClientConfig config = LClientConfig.get();
-            if (captureTarget == CaptureTarget.RECON_ZOOM) config.reconZoomKey = newKey;
-            else config.reconWaypointKey = newKey;
+            if (captureTarget == CaptureTarget.LOOT_TOGGLE) config.lootEspToggleKey = newKey;
+            else if (captureTarget == CaptureTarget.RECON_ZOOM) config.reconZoomKey = newKey;
+            else if (captureTarget == CaptureTarget.RECON_WAYPOINT) config.reconWaypointKey = newKey;
             config.save();
             captureTarget = CaptureTarget.NONE;
             refreshLabels();
@@ -231,8 +269,8 @@ public final class ModuleSettingsScreen extends Screen {
         graphics.drawCenteredString(font, module.subtitle, width / 2, 42, 0xFFAAB7C4);
 
         String info = switch (module) {
-            case LOOT_ESP -> "ESP propio de Lclient: cajas sin depth-test; no depende del glow vanilla.";
-            case SMART_OFFHAND -> "Sólo restaura si el slot de respaldo sigue siendo seguro; no pisa cambios manuales.";
+            case LOOT_ESP -> "X-ray propio: caja + marcador opcional con NO_DEPTH_TEST. Sólo items ya cargados por el cliente.";
+            case SMART_OFFHAND -> "AUTO o comida exacta. Si elegís una, no cambia a otra salvo que habilites el fallback.";
             case RECON -> "Mantén Zoom. Rueda arriba = más zoom; abajo = menos. Waypoint usa el raycast largo real.";
             case JOURNEYMAP -> JourneyMapBridge.isReady()
                     ? "JourneyMap 5.10.x conectado. Recon puede crear su waypoint temporal."
