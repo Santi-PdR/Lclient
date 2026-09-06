@@ -25,12 +25,16 @@ import net.minecraftforge.fml.common.Mod;
 /** Tactical Recon controller with render-only zoom and long-range client raycast. */
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class ReconController {
+    private static final long ZOOM_SAVE_DEBOUNCE_MS = 450L;
+
     private static boolean zoomActive;
     private static boolean waypointKeyDown;
     private static Object trackedLevel;
     private static double smoothedFov = -1.0D;
     private static String statusText = "";
     private static long statusUntil;
+    private static boolean zoomConfigDirty;
+    private static long zoomSaveAt;
 
     private ReconController() {
     }
@@ -41,14 +45,17 @@ public final class ReconController {
 
         Minecraft minecraft = Minecraft.getInstance();
         LClientConfig config = LClientConfig.get();
+        flushZoomConfigIfDue(config, false);
 
         if (minecraft.player == null || minecraft.level == null) {
-            reset();
+            flushZoomConfigIfDue(config, true);
+            resetRuntime();
             return;
         }
 
         if (trackedLevel != minecraft.level) {
-            reset();
+            flushZoomConfigIfDue(config, true);
+            resetRuntime();
             trackedLevel = minecraft.level;
         }
 
@@ -57,9 +64,7 @@ public final class ReconController {
         if (!zoomActive) smoothedFov = -1.0D;
 
         boolean waypointDown = canUseRecon && keyDown(minecraft, config.reconWaypointKey);
-        if (zoomActive && waypointDown && !waypointKeyDown) {
-            createWaypoint(minecraft, config);
-        }
+        if (zoomActive && waypointDown && !waypointKeyDown) createWaypoint(minecraft, config);
         waypointKeyDown = waypointDown;
     }
 
@@ -72,7 +77,8 @@ public final class ReconController {
         int next = Mth.clamp(config.reconZoomFov + direction * 2, 8, 50);
         if (next != config.reconZoomFov) {
             config.reconZoomFov = next;
-            config.save();
+            zoomConfigDirty = true;
+            zoomSaveAt = System.currentTimeMillis() + ZOOM_SAVE_DEBOUNCE_MS;
             setStatus("Zoom " + zoomText(Minecraft.getInstance(), next));
         }
 
@@ -92,17 +98,9 @@ public final class ReconController {
         event.setFOV(smoothedFov);
     }
 
-    public static boolean isZoomActive() {
-        return zoomActive;
-    }
-
-    public static int getZoomFov() {
-        return LClientConfig.get().reconZoomFov;
-    }
-
-    public static String getZoomText() {
-        return zoomText(Minecraft.getInstance(), LClientConfig.get().reconZoomFov);
-    }
+    public static boolean isZoomActive() { return zoomActive; }
+    public static int getZoomFov() { return LClientConfig.get().reconZoomFov; }
+    public static String getZoomText() { return zoomText(Minecraft.getInstance(), LClientConfig.get().reconZoomFov); }
 
     private static String zoomText(Minecraft minecraft, int targetFov) {
         int baseFov = minecraft.options.fov().get();
@@ -114,9 +112,7 @@ public final class ReconController {
         return System.currentTimeMillis() <= statusUntil ? statusText : "";
     }
 
-    public static HitResult getTargetHit() {
-        return getTargetHit(Minecraft.getInstance());
-    }
+    public static HitResult getTargetHit() { return getTargetHit(Minecraft.getInstance()); }
 
     public static HitResult getTargetHit(Minecraft minecraft) {
         if (minecraft.player == null || minecraft.level == null) return null;
@@ -127,11 +123,7 @@ public final class ReconController {
         Vec3 end = eye.add(look.scale(range));
 
         BlockHitResult blockHit = minecraft.level.clip(new ClipContext(
-                eye,
-                end,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                minecraft.player
+                eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraft.player
         ));
 
         double blockDistanceSq = blockHit.getType() == HitResult.Type.MISS
@@ -140,10 +132,7 @@ public final class ReconController {
 
         AABB searchBox = minecraft.player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0D);
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                minecraft.player,
-                eye,
-                end,
-                searchBox,
+                minecraft.player, eye, end, searchBox,
                 entity -> entity != minecraft.player && !entity.isSpectator() && entity.isPickable(),
                 blockDistanceSq
         );
@@ -167,16 +156,30 @@ public final class ReconController {
     private static void createWaypoint(Minecraft minecraft, LClientConfig config) {
         HitResult hit = getTargetHit(minecraft);
         BlockPos position = targetBlockPos(hit);
-        if (position == null) return;
+        if (position == null) {
+            setStatus("Recon no encontró un punto para marcar");
+            return;
+        }
 
-        if (!config.journeyMap || !config.journeyMapReconWaypoint || !JourneyMapBridge.isReady()) {
-            setStatus("JourneyMap+ no disponible");
+        if (!config.journeyMap || !config.journeyMapReconWaypoint) {
+            setStatus("JourneyMap+ está desactivado");
+            return;
+        }
+        if (!JourneyMapBridge.isInstalled()) {
+            setStatus("JourneyMap no está instalado");
+            return;
+        }
+        if (!JourneyMapBridge.isReady()) {
+            setStatus(shortStatus(JourneyMapBridge.getStatusText()));
             return;
         }
 
         String label = targetLabel(minecraft, hit, position);
-        JourneyMapBridge.markRecon(position, label, minecraft.level.dimension());
-        setStatus("Waypoint · " + label + " · " + position.toShortString());
+        if (JourneyMapBridge.markRecon(position, label, minecraft.level.dimension())) {
+            setStatus("Waypoint · " + label + " · " + position.toShortString());
+        } else {
+            setStatus(shortStatus(JourneyMapBridge.getStatusText()));
+        }
     }
 
     private static String targetLabel(Minecraft minecraft, HitResult hit, BlockPos position) {
@@ -191,12 +194,25 @@ public final class ReconController {
         return "Dirección";
     }
 
-    private static void setStatus(String text) {
-        statusText = text;
-        statusUntil = System.currentTimeMillis() + 1800L;
+    private static String shortStatus(String text) {
+        if (text == null || text.isBlank()) return "JourneyMap+ no disponible";
+        return text.length() <= 88 ? text : text.substring(0, 88);
     }
 
-    private static void reset() {
+    private static void setStatus(String text) {
+        statusText = text == null ? "" : text;
+        statusUntil = System.currentTimeMillis() + 2200L;
+    }
+
+    private static void flushZoomConfigIfDue(LClientConfig config, boolean force) {
+        if (!zoomConfigDirty) return;
+        if (!force && System.currentTimeMillis() < zoomSaveAt) return;
+        config.save();
+        zoomConfigDirty = false;
+        zoomSaveAt = 0L;
+    }
+
+    private static void resetRuntime() {
         zoomActive = false;
         waypointKeyDown = false;
         trackedLevel = null;
