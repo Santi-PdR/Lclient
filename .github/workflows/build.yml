@@ -45,8 +45,9 @@ jobs:
           fi
 
           unzip -t "$JAR" >/dev/null
-          unzip -l "$JAR" | grep -q 'META-INF/mods.toml'
-          unzip -l "$JAR" | grep -q 'com/santipdr/copyl/CopyL.class'
+          unzip -Z1 "$JAR" > /tmp/lclient-entries.txt
+          grep -Fxq 'META-INF/mods.toml' /tmp/lclient-entries.txt
+          grep -Fxq 'com/santipdr/copyl/CopyL.class' /tmp/lclient-entries.txt
 
           cp "$JAR" /tmp/lclient-latest.jar
           SHA256="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
@@ -72,7 +73,6 @@ jobs:
           VERSION="${{ steps.jar.outputs.version }}"
           SHA256="${{ steps.jar.outputs.sha256 }}"
 
-          # Never let an older main build overwrite a newer installer payload.
           REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           if [ "$REMOTE_MAIN" != "$GITHUB_SHA" ]; then
             echo "Skipping installer publication: this run is stale."
@@ -81,7 +81,6 @@ jobs:
             exit 0
           fi
 
-          # Verify that the exact bytes validated above are still being published.
           ACTUAL_SHA="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
           if [ "$ACTUAL_SHA" != "$SHA256" ]; then
             echo "Installer JAR changed after validation." >&2
