@@ -33,7 +33,9 @@ import java.util.Set;
 public final class CopyLClientEvents {
     private static final boolean[] messageKeyDown = new boolean[CopyLKeyMappings.SLOT_COUNT];
     private static boolean wheelKeyDown;
-    private static boolean reconKeyDown;
+    private static boolean reconWaypointKeyDown;
+    private static boolean reconZoomActive;
+    private static Integer reconOriginalFov;
     private static float previousHealth = -1.0F;
     private static int tickCounter;
 
@@ -62,12 +64,12 @@ public final class CopyLClientEvents {
         pollQuickMessages(minecraft, config);
 
         if (minecraft.player == null || minecraft.level == null) {
-            resetWorldState();
+            resetWorldState(minecraft);
             return;
         }
 
         if (minecraft.level != trackedLevel) {
-            resetWorldState();
+            resetWorldState(minecraft);
             trackedLevel = minecraft.level;
             worldEnteredTick = tickCounter;
         }
@@ -87,6 +89,7 @@ public final class CopyLClientEvents {
     private static void pollWheelKey(Minecraft minecraft, LClientConfig config) {
         boolean down = keyDown(minecraft, config.wheelKey);
         if (down && !wheelKeyDown && minecraft.screen == null) {
+            endReconZoom(minecraft);
             minecraft.setScreen(new LClientWheelScreen(null));
         }
         wheelKeyDown = down;
@@ -118,22 +121,62 @@ public final class CopyLClientEvents {
     }
 
     private static void pollRecon(Minecraft minecraft, LClientConfig config) {
-        boolean down = config.recon && keyDown(minecraft, config.reconMarkKey);
-        if (down && !reconKeyDown && minecraft.screen == null && minecraft.hitResult != null) {
-            if (minecraft.hitResult instanceof BlockHitResult block) {
-                LClientHud.notify("Recon: " + block.getBlockPos().toShortString());
-                if (config.journeyMap && config.journeyMapReconWaypoint) {
-                    JourneyMapBridge.markRecon(block.getBlockPos(), minecraft.level.dimension());
-                }
-            } else if (minecraft.hitResult instanceof EntityHitResult entityHit) {
-                Entity entity = entityHit.getEntity();
-                LClientHud.notify("Recon: " + entity.getName().getString() + " @ " + entity.blockPosition().toShortString());
-                if (config.journeyMap && config.journeyMapReconWaypoint) {
-                    JourneyMapBridge.markRecon(entity.blockPosition(), minecraft.level.dimension());
-                }
-            }
+        boolean zoomRequested = config.recon
+                && minecraft.screen == null
+                && keyDown(minecraft, config.reconZoomKey);
+
+        if (zoomRequested) beginOrMaintainReconZoom(minecraft, config);
+        else endReconZoom(minecraft);
+
+        boolean waypointDown = config.recon
+                && minecraft.screen == null
+                && keyDown(minecraft, config.reconWaypointKey);
+
+        if (waypointDown && !reconWaypointKeyDown && reconZoomActive) {
+            createReconWaypoint(minecraft, config);
         }
-        reconKeyDown = down;
+        reconWaypointKeyDown = waypointDown;
+    }
+
+    private static void beginOrMaintainReconZoom(Minecraft minecraft, LClientConfig config) {
+        if (!reconZoomActive) {
+            reconOriginalFov = minecraft.options.fov().get();
+            reconZoomActive = true;
+        }
+        if (minecraft.options.fov().get() != config.reconZoomFov) {
+            minecraft.options.fov().set(config.reconZoomFov);
+        }
+    }
+
+    private static void endReconZoom(Minecraft minecraft) {
+        if (!reconZoomActive) return;
+        if (reconOriginalFov != null) {
+            minecraft.options.fov().set(reconOriginalFov);
+        }
+        reconOriginalFov = null;
+        reconZoomActive = false;
+    }
+
+    private static void createReconWaypoint(Minecraft minecraft, LClientConfig config) {
+        if (minecraft.hitResult == null) return;
+
+        if (!(config.journeyMap && config.journeyMapReconWaypoint && JourneyMapBridge.isReady())) {
+            LClientHud.notify("Recon: no se creó waypoint porque JourneyMap+ no está disponible");
+            return;
+        }
+
+        if (minecraft.hitResult instanceof BlockHitResult block) {
+            JourneyMapBridge.markRecon(block.getBlockPos(), minecraft.level.dimension());
+            LClientHud.notify("Recon: waypoint creado en " + block.getBlockPos().toShortString());
+        } else if (minecraft.hitResult instanceof EntityHitResult entityHit) {
+            Entity entity = entityHit.getEntity();
+            JourneyMapBridge.markRecon(entity.blockPosition(), minecraft.level.dimension());
+            LClientHud.notify("Recon: waypoint creado sobre " + entity.getName().getString());
+        }
+    }
+
+    public static boolean isReconZoomActive() {
+        return reconZoomActive;
     }
 
     private static void recordDamage(Minecraft minecraft, LClientConfig config) {
@@ -172,7 +215,7 @@ public final class CopyLClientEvents {
 
     private static void handleSmartOffhand(Minecraft minecraft, LClientConfig config) {
         if (!config.smartOffhand || minecraft.gameMode == null) {
-            clearSmartOffhandState();
+            restoreManagedOffhandWhenDisabling(minecraft);
             return;
         }
 
@@ -194,7 +237,7 @@ public final class CopyLClientEvents {
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
                 smartOffhandActive = true;
-                LClientHud.notify("Comida movida temporalmente a la mano secundaria");
+                LClientHud.notify("Smart Offhand: comida movida temporalmente a la mano secundaria");
             } else {
                 swapInventoryWithOffhand(minecraft, source);
                 clearSmartOffhandState();
@@ -221,7 +264,20 @@ public final class CopyLClientEvents {
 
         swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
         clearSmartOffhandState();
-        LClientHud.notify("Objeto anterior restaurado en la mano secundaria");
+        LClientHud.notify("Smart Offhand: objeto anterior restaurado");
+    }
+
+    private static void restoreManagedOffhandWhenDisabling(Minecraft minecraft) {
+        if (!smartOffhandActive) {
+            clearSmartOffhandState();
+            return;
+        }
+
+        if (minecraft.player != null && minecraft.gameMode != null && canSafelyRestore(minecraft.player)) {
+            swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
+            LClientHud.notify("Smart Offhand desactivado: objeto anterior restaurado");
+        }
+        clearSmartOffhandState();
     }
 
     private static boolean canSafelyRestore(Player player) {
@@ -241,9 +297,7 @@ public final class CopyLClientEvents {
 
             FoodProperties food = stack.getItem().getFoodProperties();
             float score = stack.getCount();
-            if (food != null) {
-                score += food.getNutrition() * 20.0F;
-            }
+            if (food != null) score += food.getNutrition() * 20.0F;
 
             if (score > bestScore) {
                 bestScore = score;
@@ -319,18 +373,19 @@ public final class CopyLClientEvents {
         double max = config.entityAlertRange;
         if (minecraft.player.distanceToSqr(entity) > max * max) return;
 
-        // Suppress the flood produced by initial login, dimension changes and
-        // entities that merely enter client render/tracking range with a chunk.
         if (tickCounter - worldEnteredTick < config.entityAlertWarmupTicks) return;
         long chunkKey = ChunkPos.asLong(entity.chunkPosition().x, entity.chunkPosition().z);
         Integer firstSeenTick = warmChunks.get(chunkKey);
         if (firstSeenTick == null || tickCounter - firstSeenTick < config.entityAlertWarmupTicks) return;
 
         int distance = (int) Math.round(minecraft.player.distanceTo(entity));
-        LClientHud.notify("Ha aparecido una entidad cerca (" + distance + " m)");
+        String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        LClientHud.notify("Entidad nueva cerca: " + entity.getName().getString() + " [" + type + "] · " + distance + " m");
     }
 
-    private static void resetWorldState() {
+    private static void resetWorldState(Minecraft minecraft) {
+        endReconZoom(minecraft);
+        reconWaypointKeyDown = false;
         previousHealth = -1.0F;
         clearSmartOffhandState();
         glowingLootOriginal.clear();
