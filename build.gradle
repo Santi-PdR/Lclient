@@ -5,11 +5,11 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
 }
 
-version = '1.2.0'
-group = 'com.santipdr.copyl'
+version = '2.0.0'
+group = 'com.santipdr.lclient'
 
 base {
-    archivesName = 'copyl'
+    archivesName = 'lclient'
 }
 
 java {
@@ -26,7 +26,7 @@ minecraft {
             property 'forge.logging.console.level', 'info'
 
             mods {
-                copyl {
+                lclient {
                     source sourceSets.main
                 }
             }
@@ -37,10 +37,16 @@ minecraft {
 }
 
 repositories {
+    mavenCentral()
+    maven {
+        name = 'JourneyMap Maven'
+        url = 'https://maven.blamejared.com'
+    }
 }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
+    compileOnly group: 'info.journeymap', name: 'journeymap-api-forge', version: '1.20.1-2.0.0', changing: true
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -50,9 +56,9 @@ tasks.withType(JavaCompile).configureEach {
 jar {
     manifest {
         attributes([
-                'Specification-Title'     : 'CopyL',
+                'Specification-Title'     : 'Lclient',
                 'Specification-Vendor'    : 'Santi-PdR',
-                'Specification-Version'   : '1',
+                'Specification-Version'   : '2',
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.version,
                 'Implementation-Vendor'   : 'Santi-PdR'

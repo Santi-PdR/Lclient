@@ -3,32 +3,37 @@ loaderVersion="[47,)"
 license="All Rights Reserved"
 
 [[mods]]
-modId="copyl"
-version="1.2.0"
-displayName="CopyL"
+modId="lclient"
+version="2.0.0"
+displayName="Lclient"
 authors="Santi-PdR"
-displayURL="https://github.com/Santi-PdR/CopyL"
+displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
-CopyL es un mod 100% client-side de mensajes rápidos para Minecraft.
+Cliente modular 100% client-side para Forge 1.20.1.
 
-Guarda hasta 10 mensajes o comandos y asigna una tecla independiente a cada uno. Puedes cambiar tanto el texto como la tecla directamente desde el editor de CopyL; también siguen disponibles los controles vanilla en Opciones > Controles > CopyL.
+Todos los módulos viven en una única ruleta: CopyL / mensajes rápidos, Sound Radar, Loot ESP, panel de combate y notificaciones, Smart Offhand, alertas de entidades, Advanced Recon e integración táctica con JourneyMap.
 
-La interfaz incluye animaciones suaves y feedback sonoro para hacer más clara la edición. Al pulsar un atajo, CopyL envía el contenido automáticamente al chat. Si el texto empieza con /, se envía como comando.
-
-Pulsa - por defecto para abrir el editor, o abre Mods > CopyL > Config. Los mensajes y keybinds se guardan localmente y el servidor no necesita tener CopyL instalado.
+Lclient no añade controles propios a Opciones > Controles. La tecla de la ruleta se configura desde Mods > Lclient > Config, y las teclas/ajustes de cada módulo se administran desde la propia ruleta.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 
-[[dependencies.copyl]]
+[[dependencies.lclient]]
 modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="CLIENT"
 
-[[dependencies.copyl]]
+[[dependencies.lclient]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1,1.20.2)"
 ordering="NONE"
+side="CLIENT"
+
+[[dependencies.lclient]]
+modId="journeymap"
+mandatory=false
+versionRange="[5.10,)"
+ordering="AFTER"
 side="CLIENT"
