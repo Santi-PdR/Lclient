@@ -98,9 +98,6 @@ public final class CopyLClientEvents {
             boolean reserved = isReservedLclientKey(key, config);
             boolean down = key >= 0 && !reserved && keyDown(minecraft, key);
 
-            // A slot whose binding changed must first synchronize to the new
-            // physical key state. Without this, saving a binding while that key
-            // is still held can immediately send the slot on the next tick.
             if (observedMessageKeys[i] != key) {
                 observedMessageKeys[i] = key;
                 messageKeyDown[i] = down;
@@ -108,9 +105,6 @@ public final class CopyLClientEvents {
             }
 
             if (canSend && down && !messageKeyDown[i]) sendSlot(minecraft, i);
-
-            // While a GUI is open, mirror the real physical state instead of
-            // resetting false. This prevents phantom presses when closing menus.
             messageKeyDown[i] = down;
         }
     }
@@ -183,7 +177,9 @@ public final class CopyLClientEvents {
             swapInventoryWithOffhand(minecraft, source);
             ItemStack inserted = player.getOffhandItem().copy();
 
-            if (!inserted.isEmpty() && inserted.isEdible()) {
+            if (!inserted.isEmpty()
+                    && inserted.isEdible()
+                    && inserted.getFoodProperties(player) != null) {
                 smartFoodSourceSlot = source;
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
@@ -257,7 +253,7 @@ public final class CopyLClientEvents {
         int bestCount = -1;
         for (int i = 0; i < 36; i++) {
             ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty() || !stack.isEdible()) continue;
+            if (stack.isEmpty() || !stack.isEdible() || stack.getFoodProperties(player) == null) continue;
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (!wanted.equals(id)) continue;
             if (stack.getCount() > bestCount) {
@@ -270,19 +266,23 @@ public final class CopyLClientEvents {
 
     private static int findBestAutoFoodSlot(Player player) {
         int bestSlot = -1;
-        float bestScore = -1.0F;
+        float bestScore = -Float.MAX_VALUE;
 
         for (int i = 0; i < 36; i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty() || !stack.isEdible()) continue;
 
-            FoodProperties food = stack.getItem().getFoodProperties();
+            // Forge's stack-aware hook is important for modded foods whose
+            // properties depend on NBT/capabilities. Item#getFoodProperties()
+            // is deprecated and can return the wrong value for those stacks.
+            FoodProperties food = stack.getFoodProperties(player);
+            if (food == null) continue;
+
             float score = Math.min(stack.getCount(), 16) * 0.45F;
-            if (food != null) {
-                score += food.getNutrition() * 3.0F;
-                score += food.getSaturationModifier() * food.getNutrition() * 2.0F;
-                if (food.isFastFood()) score += 0.5F;
-            }
+            score += food.getNutrition() * 3.0F;
+            score += food.getSaturationModifier() * food.getNutrition() * 2.0F;
+            if (food.isFastFood()) score += 0.5F;
+            score -= harmfulFoodPenalty(food);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -290,6 +290,20 @@ public final class CopyLClientEvents {
             }
         }
         return bestSlot;
+    }
+
+    private static float harmfulFoodPenalty(FoodProperties food) {
+        float penalty = 0.0F;
+        for (var entry : food.getEffects()) {
+            var effect = entry.getFirst();
+            if (effect == null || effect.getEffect().isBeneficial()) continue;
+
+            float chance = Math.max(0.0F, Math.min(1.0F, entry.getSecond()));
+            float durationWeight = Math.min(effect.getDuration(), 600) / 100.0F;
+            float amplifierWeight = Math.min(effect.getAmplifier(), 4) + 1.0F;
+            penalty += chance * (12.0F + durationWeight + amplifierWeight * 4.0F);
+        }
+        return penalty;
     }
 
     private static void swapInventoryWithOffhand(Minecraft minecraft, int inventoryIndex) {
