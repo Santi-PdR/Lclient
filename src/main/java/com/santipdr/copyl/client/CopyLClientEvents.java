@@ -54,8 +54,8 @@ public final class CopyLClientEvents {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         Minecraft minecraft = Minecraft.getInstance();
-        // Forge fires this while the local player/game mode are still available.
-        // Best effort: restore the managed swap before the connection disappears.
+        // Forge fires this while the local player/game mode are normally still
+        // available. Restore only if the tracked swap can still be proven safe.
         if (smartOffhandActive) restoreManagedOffhandWhenDisabling(minecraft);
         resetTransientKeys();
     }
@@ -75,23 +75,31 @@ public final class CopyLClientEvents {
                 && minecraft.player != null
                 && minecraft.level != null) {
             config.lootEsp = !config.lootEsp;
+            if (!config.lootEsp) LootEspRenderer.clearCache();
             config.save();
         }
+        // Keep the physical state synchronized even while a screen is open so
+        // closing a menu with X held cannot look like a new press.
         lootEspToggleKeyDown = down;
     }
 
     private static void pollQuickMessages(Minecraft minecraft, LClientConfig config) {
-        if (!config.quickMessages || minecraft.player == null || minecraft.player.connection == null || minecraft.screen != null) {
-            for (int i = 0; i < messageKeyDown.length; i++) messageKeyDown[i] = false;
-            return;
-        }
-
         MessageConfig messages = MessageConfig.getInstance();
+        boolean canSend = config.quickMessages
+                && minecraft.player != null
+                && minecraft.player.connection != null
+                && minecraft.screen == null;
+
         for (int i = 0; i < messageKeyDown.length; i++) {
             int key = messages.getKeyCode(i);
             boolean reserved = isReservedLclientKey(key, config);
             boolean down = key >= 0 && !reserved && keyDown(minecraft, key);
-            if (down && !messageKeyDown[i]) sendSlot(minecraft, i);
+
+            if (canSend && down && !messageKeyDown[i]) sendSlot(minecraft, i);
+
+            // Important: while a GUI is open, mirror the real physical state
+            // instead of resetting to false. Otherwise a key held while the GUI
+            // closes becomes a phantom fresh press on the next tick.
             messageKeyDown[i] = down;
         }
     }
@@ -105,6 +113,8 @@ public final class CopyLClientEvents {
     }
 
     private static void sendSlot(Minecraft minecraft, int slot) {
+        if (minecraft.player == null || minecraft.player.connection == null) return;
+
         String message = MessageConfig.getInstance().getMessage(slot);
         if (message.isBlank()) return;
 
@@ -141,6 +151,16 @@ public final class CopyLClientEvents {
         }
 
         Player player = minecraft.player;
+        if (player == null) {
+            clearSmartOffhandState();
+            return;
+        }
+        // Never send inventory click packets during death/spectator transitions.
+        // The server may be rebuilding the player inventory at exactly that time.
+        if (!player.isAlive() || player.isSpectator()) {
+            clearSmartOffhandState();
+            return;
+        }
         if (!player.inventoryMenu.getCarried().isEmpty()) return;
 
         int foodLevel = player.getFoodData().getFoodLevel();
@@ -160,7 +180,11 @@ public final class CopyLClientEvents {
                 smartInsertedFood = inserted;
                 smartOffhandActive = true;
             } else {
-                swapInventoryWithOffhand(minecraft, source);
+                // Server/mod rejected or changed the click sequence. Attempt to
+                // put the slot back only when the first swap visibly succeeded.
+                if (!ItemStack.isSameItemSameTags(player.getOffhandItem(), original)) {
+                    swapInventoryWithOffhand(minecraft, source);
+                }
                 clearSmartOffhandState();
             }
             return;
@@ -170,6 +194,8 @@ public final class CopyLClientEvents {
         boolean stillManagedFood = currentOffhand.isEmpty()
                 || ItemStack.isSameItemSameTags(currentOffhand, smartInsertedFood);
         if (!stillManagedFood) {
+            // User or another mod took control of offhand; stop managing it and
+            // never overwrite that newer choice.
             clearSmartOffhandState();
             return;
         }
@@ -191,6 +217,8 @@ public final class CopyLClientEvents {
         }
 
         if (minecraft.player != null
+                && minecraft.player.isAlive()
+                && !minecraft.player.isSpectator()
                 && minecraft.gameMode != null
                 && minecraft.player.inventoryMenu.getCarried().isEmpty()
                 && canSafelyRestore(minecraft.player)) {
@@ -261,6 +289,8 @@ public final class CopyLClientEvents {
 
     private static void swapInventoryWithOffhand(Minecraft minecraft, int inventoryIndex) {
         if (minecraft.player == null || minecraft.gameMode == null) return;
+        if (inventoryIndex < 0 || inventoryIndex >= 36) return;
+
         int menuSlot = inventoryIndex < 9 ? 36 + inventoryIndex : inventoryIndex;
         int containerId = minecraft.player.inventoryMenu.containerId;
         minecraft.gameMode.handleInventoryMouseClick(containerId, menuSlot, 0, ClickType.PICKUP, minecraft.player);
