@@ -38,11 +38,15 @@ minecraft {
 
 repositories {
     mavenCentral()
+    maven {
+        name = 'JourneyMap Maven'
+        url = 'https://maven.blamejared.com'
+    }
 }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
-    compileOnly 'info.journeymap:journeymap-api:2.0.0'
+    compileOnly group: 'info.journeymap', name: 'journeymap-api-forge', version: '1.20.1-2.0.0', changing: true
 }
 
 tasks.withType(JavaCompile).configureEach {
