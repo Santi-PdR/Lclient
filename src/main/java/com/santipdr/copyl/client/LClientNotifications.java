@@ -35,6 +35,7 @@ public final class LClientNotifications {
     private static String lastReconStatus = "";
 
     private static boolean healthCritical;
+    private static boolean inventoryLow;
     private static boolean inventoryFull;
     private static String criticalHeldKey = "";
     private static String criticalArmorKey = "";
@@ -184,6 +185,7 @@ public final class LClientNotifications {
             observeGameplayAlerts(minecraft);
         } else {
             healthCritical = false;
+            inventoryLow = false;
             inventoryFull = false;
             criticalHeldKey = "";
             criticalArmorKey = "";
@@ -207,10 +209,17 @@ public final class LClientNotifications {
         }
         healthCritical = criticalNow;
 
-        boolean fullNow = safeInventoryFull(player);
+        int freeSlots = safeFreeSlots(player);
+        boolean lowNow = freeSlots > 0 && freeSlots <= 2;
+        boolean fullNow = freeSlots == 0;
+        if (lowNow && !inventoryLow) {
+            warning("inventory-low", "Inventario casi lleno",
+                    freeSlots + (freeSlots == 1 ? " slot libre" : " slots libres"));
+        }
         if (fullNow && !inventoryFull) {
             warning("inventory-full", "Inventario lleno", "No quedan slots libres en el inventario principal");
         }
+        inventoryLow = lowNow;
         inventoryFull = fullNow;
 
         ItemStack held = safeMainHand(player);
@@ -246,11 +255,15 @@ public final class LClientNotifications {
         }
     }
 
-    private static boolean safeInventoryFull(net.minecraft.world.entity.player.Player player) {
+    private static int safeFreeSlots(net.minecraft.world.entity.player.Player player) {
         try {
-            return player.getInventory().getFreeSlot() < 0;
+            int free = 0;
+            for (int i = 0; i < 36; i++) {
+                if (player.getInventory().getItem(i).isEmpty()) free++;
+            }
+            return free;
         } catch (RuntimeException | LinkageError ignored) {
-            return false;
+            return -1;
         }
     }
 
@@ -340,17 +353,21 @@ public final class LClientNotifications {
         int screenW = minecraft.getWindow().getGuiScaledWidth();
         int screenH = minecraft.getWindow().getGuiScaledHeight();
         int maxWidth = Math.min(270, Math.max(100, screenW - 24));
-        int xRight = screenW - 8;
-        int y = screenH - 40;
+        HudAnchor anchor = HudAnchor.fromConfig(config.notificationHudAnchor, HudAnchor.BOTTOM_RIGHT);
+        int usedHeight = 0;
         long now = System.currentTimeMillis();
 
-        for (int i = visible.size() - 1; i >= 0; i--) {
-            Notice notice = visible.get(i);
+        for (Notice notice : visible) {
             int width = Math.min(maxWidth, Math.max(100,
                     Math.max(minecraft.font.width(notice.title), minecraft.font.width(notice.message)) + 22));
             int height = notice.message.isBlank() ? 23 : 34;
-            y -= height + 5;
-            if (y < 8) break;
+            int bottomMargin = anchor.isTop() ? 8 : 40;
+            int y = anchor.isTop()
+                    ? 8 + usedHeight
+                    : screenH - bottomMargin - usedHeight - height;
+            if (y < 8 || y + height > screenH - 4) break;
+            int left = anchor.left(screenW, width, 8);
+            int right = left + width;
 
             long remaining = Math.max(0L, notice.expiresAt - now);
             long fadeWindow = Math.min(450L, Math.max(180L, (notice.expiresAt - notice.createdAt) / 4L));
@@ -360,10 +377,9 @@ public final class LClientNotifications {
             int accent = (Math.max(60, Math.min(255, Math.round(255.0F * fade))) << 24)
                     | (notice.severity.accent & 0x00FFFFFF);
 
-            int left = xRight - width;
-            graphics.fill(left, y, xRight, y + height, bg);
+            graphics.fill(left, y, right, y + height, bg);
             graphics.fill(left, y, left + 2, y + height, accent);
-            graphics.fill(left + 2, y, xRight, y + 1, (Math.max(30, alpha / 2) << 24) | 0x6A8194);
+            graphics.fill(left + 2, y, right, y + 1, (Math.max(30, alpha / 2) << 24) | 0x6A8194);
 
             graphics.drawString(minecraft.font,
                     minecraft.font.plainSubstrByWidth(notice.title, Math.max(20, width - 14)),
@@ -373,6 +389,7 @@ public final class LClientNotifications {
                         minecraft.font.plainSubstrByWidth(notice.message, Math.max(20, width - 14)),
                         left + 8, y + 19, 0xFFAAB8C5, false);
             }
+            usedHeight += height + 5;
         }
     }
 
@@ -407,6 +424,7 @@ public final class LClientNotifications {
         initializedStates = false;
         lastReconStatus = "";
         healthCritical = false;
+        inventoryLow = false;
         inventoryFull = false;
         criticalHeldKey = "";
         criticalArmorKey = "";
