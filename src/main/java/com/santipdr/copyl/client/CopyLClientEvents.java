@@ -4,12 +4,16 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.CopyL;
 import com.santipdr.copyl.client.screen.LClientWheelScreen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
@@ -141,10 +145,11 @@ public final class CopyLClientEvents {
     private static void sendSlot(Minecraft minecraft, int slot) {
         if (minecraft.player == null || minecraft.player.connection == null) return;
 
-        String message = MessageConfig.getInstance().getMessage(slot);
+        MessageConfig config = MessageConfig.getInstance();
+        String message = config.getMessage(slot);
         if (message.isBlank()) return;
 
-        message = expandQuickMessage(message, minecraft.player);
+        message = expandQuickMessage(message, minecraft);
         message = truncateUtf16Safely(message, MAX_OUTGOING_MESSAGE_LENGTH);
         if (message.isBlank()) return;
 
@@ -155,8 +160,12 @@ public final class CopyLClientEvents {
         }
     }
 
-    private static String expandQuickMessage(String message, Player player) {
+    private static String expandQuickMessage(String message, Minecraft minecraft) {
+        Player player = minecraft.player;
+        if (player == null) return message;
+
         String dimension = player.level().dimension().location().toString();
+        TargetContext target = resolveTargetContext(minecraft);
         return message
                 .replace("{x}", Integer.toString(player.blockPosition().getX()))
                 .replace("{y}", Integer.toString(player.blockPosition().getY()))
@@ -165,7 +174,45 @@ public final class CopyLClientEvents {
                 .replace("{dim}", dimension)
                 .replace("{hp}", Integer.toString(Math.round(player.getHealth())))
                 .replace("{food}", Integer.toString(player.getFoodData().getFoodLevel()))
-                .replace("{name}", player.getGameProfile().getName());
+                .replace("{name}", player.getGameProfile().getName())
+                .replace("{target}", target.label)
+                .replace("{targetdist}", Integer.toString(target.distance))
+                .replace("{targetpos}", target.position == null ? "none" : target.position.toShortString())
+                .replace("{targetx}", target.position == null ? "-" : Integer.toString(target.position.getX()))
+                .replace("{targety}", target.position == null ? "-" : Integer.toString(target.position.getY()))
+                .replace("{targetz}", target.position == null ? "-" : Integer.toString(target.position.getZ()));
+    }
+
+    private static TargetContext resolveTargetContext(Minecraft minecraft) {
+        if (minecraft.player == null || minecraft.level == null) return TargetContext.NONE;
+
+        HitResult hit = ReconController.isZoomActive()
+                ? ReconController.getTargetHit(minecraft)
+                : minecraft.hitResult;
+        if (hit == null || hit.getType() == HitResult.Type.MISS) return TargetContext.NONE;
+
+        try {
+            if (hit instanceof EntityHitResult entityHit) {
+                BlockPos pos = entityHit.getEntity().blockPosition();
+                int distance = Math.max(0, (int) Math.round(minecraft.player.distanceTo(entityHit.getEntity())));
+                return new TargetContext(ReconController.safeEntityLabel(entityHit.getEntity()), pos, distance);
+            }
+            if (hit instanceof BlockHitResult blockHit) {
+                BlockPos pos = blockHit.getBlockPos();
+                var id = BuiltInRegistries.BLOCK.getKey(minecraft.level.getBlockState(pos).getBlock());
+                String label = id == null ? "block" : id.toString();
+                int distance = Math.max(0, (int) Math.round(
+                        minecraft.player.getEyePosition(1.0F).distanceTo(hit.getLocation())
+                ));
+                return new TargetContext(label, pos, distance);
+            }
+        } catch (RuntimeException | LinkageError ignored) {
+        }
+        return TargetContext.NONE;
+    }
+
+    private record TargetContext(String label, BlockPos position, int distance) {
+        private static final TargetContext NONE = new TargetContext("none", null, -1);
     }
 
     private static String truncateUtf16Safely(String value, int maxChars) {
@@ -219,6 +266,11 @@ public final class CopyLClientEvents {
                 smartOriginalOffhand = original;
                 smartInsertedFood = inserted;
                 smartOffhandActive = true;
+                LClientNotifications.info(
+                        "offhand-equip",
+                        "Smart Offhand",
+                        "Equipada: " + safeStackLabel(inserted)
+                );
             } else {
                 if (stackExactlyMatches(sourceAfterSwap, original)
                         && !ItemStack.isSameItemSameTags(player.getOffhandItem(), original)) {
@@ -240,11 +292,22 @@ public final class CopyLClientEvents {
 
         if (foodLevel < config.foodRestoreThreshold || player.isUsingItem()) return;
         if (!canSafelyRestore(player)) {
+            LClientNotifications.warning(
+                    "offhand-restore-blocked",
+                    "Smart Offhand",
+                    "No restauré la offhand: el slot original cambió"
+            );
             clearSmartOffhandState();
             return;
         }
 
+        ItemStack restored = smartOriginalOffhand.copy();
         swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
+        LClientNotifications.success(
+                "offhand-restore",
+                "Smart Offhand",
+                restored.isEmpty() ? "Offhand original restaurada" : "Restaurado: " + safeStackLabel(restored)
+        );
         clearSmartOffhandState();
     }
 
@@ -259,11 +322,22 @@ public final class CopyLClientEvents {
         if (minecraft.gameMode == null || !player.inventoryMenu.getCarried().isEmpty()) return;
 
         if (!canSafelyRestore(player)) {
+            LClientNotifications.warning(
+                    "offhand-disable-blocked",
+                    "Smart Offhand",
+                    "No restauré al desactivar: el slot original cambió"
+            );
             clearSmartOffhandState();
             return;
         }
 
+        ItemStack restored = smartOriginalOffhand.copy();
         swapInventoryWithOffhand(minecraft, smartFoodSourceSlot);
+        LClientNotifications.success(
+                "offhand-disable-restore",
+                "Smart Offhand",
+                restored.isEmpty() ? "Offhand original restaurada" : "Restaurado: " + safeStackLabel(restored)
+        );
         clearSmartOffhandState();
     }
 
@@ -367,6 +441,21 @@ public final class CopyLClientEvents {
             penalty += chance * (12.0F + durationWeight + amplifierWeight * 4.0F);
         }
         return penalty;
+    }
+
+    private static String safeStackLabel(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return "vacío";
+        try {
+            String name = stack.getHoverName().getString();
+            if (name != null && !name.isBlank()) return name;
+        } catch (RuntimeException | LinkageError ignored) {
+        }
+        try {
+            var id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            return id == null ? "item" : id.getPath();
+        } catch (RuntimeException | LinkageError ignored) {
+            return "item";
+        }
     }
 
     private static void swapInventoryWithOffhand(Minecraft minecraft, int inventoryIndex) {
