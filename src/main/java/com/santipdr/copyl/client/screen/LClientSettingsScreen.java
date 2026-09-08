@@ -29,11 +29,11 @@ public final class LClientSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        boolean compact = height < 250;
+        boolean compact = height < 270;
         int buttonWidth = Math.min(250, Math.max(120, width - 24));
-        int top = compact ? 54 : height / 2 - 54;
+        int top = compact ? 51 : height / 2 - 66;
         int buttonHeight = compact ? 18 : 20;
-        int step = buttonHeight + (compact ? 5 : 7);
+        int step = buttonHeight + (compact ? 4 : 7);
         int left = cx - buttonWidth / 2;
 
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
@@ -64,9 +64,14 @@ public final class LClientSettingsScreen extends Screen {
             refreshLabels();
         }).bounds(left, top + step * 3, buttonWidth, buttonHeight).build());
 
+        addRenderableWidget(Button.builder(Component.literal("Historial de avisos"), b -> {
+                    if (minecraft != null) minecraft.setScreen(new NotificationHistoryScreen(this));
+                })
+                .bounds(left, top + step * 4, buttonWidth, buttonHeight).build());
+
         int gap = 8;
         int half = Math.max(54, (buttonWidth - gap) / 2);
-        int actionsY = top + step * 4 + (compact ? 1 : 3);
+        int actionsY = top + step * 5 + (compact ? 1 : 3);
         addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> {
                     if (minecraft != null) minecraft.setScreen(new LClientWheelScreen(this));
                 })
@@ -153,10 +158,10 @@ public final class LClientSettingsScreen extends Screen {
         renderBackground(graphics);
 
         int cx = width / 2;
-        boolean compact = height < 250;
+        boolean compact = height < 270;
         int panelW = Math.min(460, Math.max(120, width - 20));
-        int panelTop = compact ? 7 : 16;
-        int panelBottom = compact ? 46 : 92;
+        int panelTop = compact ? 6 : 14;
+        int panelBottom = compact ? 44 : 90;
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelBottom, 0xB00D131A);
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelTop + 2, 0xFF6FC2FF);
 
@@ -180,7 +185,7 @@ public final class LClientSettingsScreen extends Screen {
                     panelTop + 45,
                     0xFF8799AA);
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("Los avisos no usan el chat y se ocultan automáticamente mientras hay otra pantalla abierta.", maxTextWidth),
+                    font.plainSubstrByWidth("El historial vive sólo durante la sesión y no escribe spam adicional al disco.", maxTextWidth),
                     cx,
                     panelTop + 61,
                     0xFF718596);
