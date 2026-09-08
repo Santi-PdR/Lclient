@@ -4,26 +4,24 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="lclient"
-version="2.6.0"
+version="2.7.0"
 displayName="Lclient"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
 Cliente modular 100% client-side para Forge 1.20.1.
 
-Lclient 2.6 endurece los cinco módulos actuales —CopyL, Loot ESP, Smart Offhand, Advanced Recon y JourneyMap+— contra cambios de mundo, configuraciones antiguas, inputs mantenidos, GUI Scale alto y comportamientos defectuosos de otros mods.
+Lclient 2.7 añade una capa de información central sin ensuciar el chat: Notification Center con historial de sesión, duración/cantidad configurable y alertas críticas opcionales para vida baja, inventario lleno y durabilidad de herramienta/armadura.
 
-JourneyMap+ usa JourneyMap 1.20.1-5.10.x / API 1.9 como integración opcional. Sigue MAPPING_STARTED/MAPPING_STOPPED/DISPLAY_UPDATE, reconstruye el waypoint transitorio de Recon cuando JourneyMap refresca displays y nunca conserva objetos Waypoint de una sesión anterior.
+Loot ESP conserva cajas y beacon x-ray para ItemEntity ya cargados por el cliente, pero añade una lista HUD opcional que agrupa los drops más cercanos por item con cantidad y distancia reutilizando la misma caché de escaneo.
 
-Loot ESP conserva su render x-ray con NO_DEPTH_TEST para ItemEntity ya cargados por el cliente. Libera toda referencia al ClientLevel al desactivarse/salir y limita lotes extremos de drops para proteger FPS sin consultar información adicional del servidor.
+Advanced Recon amplía su Target Panel con equipo visible: item de mano/offhand y cantidad de piezas de armadura, además de nombre, tipo, distancia, coordenadas y vida cuando están disponibles. Mantiene raycast largo, zoom render-only y JourneyMap+ opcional.
 
-Smart Offhand usa propiedades de comida del ItemStack, admite AUTO o una comida exacta, evita alimentos perjudiciales en AUTO, restaura la offhand sólo cuando el slot original coincide exactamente y aísla hooks de alimentos modded defectuosos.
+CopyL mantiene 10 slots transaccionales y suma variables de objetivo: {target}, {targetdist}, {targetpos}, {targetx}, {targety} y {targetz}. Con Recon activo usa el objetivo del raycast largo; fuera de Recon usa el hitResult vanilla. El editor tiene un layout ultracompacto de dos líneas y paginación dinámica para ventanas estrechas.
 
-CopyL mantiene 10 slots con nombres, variables dinámicas y edición transaccional. Repara/migra configs antiguas, elimina conflictos de teclas, sanea texto externo y evita activaciones fantasma al cerrar menús o reasignar teclas.
+Smart Offhand mantiene restauración exacta y selección AUTO/manual, y ahora informa mediante Notification Center cuándo equipa/restaura comida o cuándo abandona una restauración porque el slot original cambió.
 
-Advanced Recon conserva zoom render-only, rueda de magnificación, raycast largo, waypoint donde realmente se mira y Target Panel sólo durante zoom. Su raycast se cachea brevemente para rendimiento, fuerza una lectura fresca al marcar y tolera entidades/bloques modded con hooks rotos. El zoom nunca amplía el FOV respecto al FOV real del jugador.
-
-Las interfaces de Lclient son adaptativas y la configuración no añade controles propios a Opciones > Controles. La tecla global se cambia desde Mods > Lclient > Config; las teclas internas se administran desde la ruleta.
+Las interfaces siguen siendo adaptativas. La tecla global se cambia desde Mods > Lclient > Config; las teclas internas y ajustes de módulo viven en la ruleta. JourneyMap sigue siendo opcional/compileOnly.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 
