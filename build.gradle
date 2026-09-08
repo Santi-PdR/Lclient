@@ -5,11 +5,11 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
 }
 
-version = '2.8.0'
-group = 'com.santipdr.lclient'
+version = '3.0.0'
+group = 'com.santipdr.copyl'
 
 base {
-    archivesName = 'lclient'
+    archivesName = 'copyl'
 }
 
 java {
@@ -26,7 +26,7 @@ minecraft {
             property 'forge.logging.console.level', 'info'
 
             mods {
-                lclient {
+                copyl {
                     source sourceSets.main
                 }
             }
@@ -38,19 +38,10 @@ minecraft {
 
 repositories {
     mavenCentral()
-    maven {
-        name = 'Curse Maven'
-        url = 'https://www.cursemaven.com'
-        content { includeGroup 'curse.maven' }
-    }
 }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
-
-    // Compile against the JourneyMap generation used by the Jobs pack.
-    // JourneyMap 1.20.1-5.10.3 exposes API 1.20-1.9-SNAPSHOT.
-    compileOnly fg.deobf('curse.maven:journeymap-32274:5789363')
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -60,9 +51,9 @@ tasks.withType(JavaCompile).configureEach {
 jar {
     manifest {
         attributes([
-                'Specification-Title'     : 'Lclient',
+                'Specification-Title'     : 'CopyL',
                 'Specification-Vendor'    : 'Santi-PdR',
-                'Specification-Version'   : '2',
+                'Specification-Version'   : '3',
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.version,
                 'Implementation-Vendor'   : 'Santi-PdR'
