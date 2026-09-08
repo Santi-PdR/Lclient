@@ -24,6 +24,7 @@ public final class LootEspHud {
     private static final long SUMMARY_INTERVAL_MS = 160L;
     private static final int MAX_ROWS = 5;
     private static final int MAX_ENTITIES_CONSIDERED = 96;
+    private static final String[] CARDINALS = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
 
     private static ClientLevel cachedLevel;
     private static long nextRefreshAt;
@@ -36,15 +37,21 @@ public final class LootEspHud {
         private final String name;
         private int totalCount;
         private final double nearestDistance;
+        private final double nearestX;
+        private final double nearestY;
+        private final double nearestZ;
 
-        private MutableRow(String name, int totalCount, double nearestDistance) {
+        private MutableRow(String name, int totalCount, double nearestDistance, ItemEntity nearest) {
             this.name = name;
             this.totalCount = totalCount;
             this.nearestDistance = nearestDistance;
+            this.nearestX = nearest.getX();
+            this.nearestY = nearest.getY();
+            this.nearestZ = nearest.getZ();
         }
     }
 
-    private record Row(String name, int count, int distance) {
+    private record Row(String name, int count, int distance, String direction, int deltaY) {
     }
 
     @SubscribeEvent
@@ -71,11 +78,13 @@ public final class LootEspHud {
 
         GuiGraphics graphics = event.getGuiGraphics();
         int screenW = minecraft.getWindow().getGuiScaledWidth();
-        int panelW = Math.min(228, Math.max(150, screenW / 5));
+        int screenH = minecraft.getWindow().getGuiScaledHeight();
+        int panelW = Math.min(252, Math.max(150, screenW / 4));
         panelW = Math.min(panelW, Math.max(80, screenW - 16));
-        int left = 8;
-        int top = 8;
         int height = 22 + rows.size() * 13;
+        HudAnchor anchor = HudAnchor.fromConfig(config.lootHudAnchor, HudAnchor.TOP_LEFT);
+        int left = anchor.left(screenW, panelW, 8);
+        int top = anchor.top(screenH, height, 8);
 
         graphics.fill(left, top, left + panelW, top + height, 0xB00A1016);
         graphics.fill(left, top, left + 2, top + height, 0xFF6FC2FF);
@@ -85,6 +94,10 @@ public final class LootEspHud {
         int y = top + 19;
         for (Row row : rows) {
             String text = row.name + " x" + row.count + "  ·  " + row.distance + "m";
+            if (config.lootEspHudDirection) {
+                String vertical = row.deltaY > 0 ? "+" + row.deltaY : Integer.toString(row.deltaY);
+                text += "  ·  " + row.direction + " ΔY " + vertical;
+            }
             graphics.drawString(minecraft.font,
                     minecraft.font.plainSubstrByWidth(text, Math.max(20, panelW - 14)),
                     left + 8,
@@ -129,7 +142,7 @@ public final class LootEspHud {
             MutableRow existing = grouped.get(key);
             if (existing == null) {
                 if (grouped.size() >= MAX_ROWS) continue;
-                grouped.put(key, new MutableRow(safeItemName(stack, key), stack.getCount(), distance));
+                grouped.put(key, new MutableRow(safeItemName(stack, key), stack.getCount(), distance, entity));
             } else {
                 existing.totalCount += stack.getCount();
             }
@@ -142,9 +155,25 @@ public final class LootEspHud {
 
         List<Row> next = new ArrayList<>(grouped.size());
         for (MutableRow row : grouped.values()) {
-            next.add(new Row(row.name, row.totalCount, Math.max(0, (int) Math.round(row.nearestDistance))));
+            double dx = row.nearestX - minecraft.player.getX();
+            double dz = row.nearestZ - minecraft.player.getZ();
+            int deltaY = (int) Math.round(row.nearestY - minecraft.player.getY());
+            next.add(new Row(
+                    row.name,
+                    row.totalCount,
+                    Math.max(0, (int) Math.round(row.nearestDistance)),
+                    cardinal(dx, dz),
+                    deltaY
+            ));
         }
         rows = List.copyOf(next);
+    }
+
+    private static String cardinal(double dx, double dz) {
+        double yaw = Math.toDegrees(Math.atan2(-dx, dz));
+        if (yaw < 0.0D) yaw += 360.0D;
+        int index = Math.floorMod((int) Math.round(yaw / 45.0D), CARDINALS.length);
+        return CARDINALS[index];
     }
 
     private static String safeItemKey(ItemStack stack) {
