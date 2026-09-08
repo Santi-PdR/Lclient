@@ -53,24 +53,27 @@ public final class MessageEditorScreen extends Screen {
         Arrays.fill(keyButtons, null);
 
         boolean compact = useCompactLayout();
+        boolean tiny = useTinyLayout();
         boolean tight = height < 220;
-        int fieldHeight = tight ? 18 : 20;
-        int rowStep = compact ? (tight ? 23 : 28) : 34;
-        int top = compact ? (tight ? 35 : 50) : 68;
+        int pageSize = pageSize();
+        int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
+        page = Math.max(0, Math.min(page, maxPage));
 
-        int contentWidth = compact
-                ? Math.min(Math.max(200, width - 20), 500)
-                : Math.min(width - 24, 760);
+        int fieldHeight = tight ? 18 : 20;
+        int rowStep = tiny ? (tight ? 41 : 45) : compact ? (tight ? 23 : 28) : 34;
+        int top = tiny ? (tight ? 38 : 53) : compact ? (tight ? 35 : 50) : 76;
+
+        int contentWidth;
+        if (tiny) contentWidth = Math.min(320, Math.max(120, width - 16));
+        else if (compact) contentWidth = Math.min(500, Math.max(180, width - 20));
+        else contentWidth = Math.min(width - 24, 760);
         int left = (width - contentWidth) / 2;
         int columnWidth = compact ? contentWidth : (contentWidth - 12) / 2;
 
-        int firstSlot = compact ? page * COMPACT_PAGE_SIZE : 0;
-        int lastSlot = compact ? Math.min(CopyLKeyMappings.SLOT_COUNT, firstSlot + COMPACT_PAGE_SIZE) : CopyLKeyMappings.SLOT_COUNT;
-        if (compact && firstSlot >= CopyLKeyMappings.SLOT_COUNT) {
-            page = 0;
-            firstSlot = 0;
-            lastSlot = COMPACT_PAGE_SIZE;
-        }
+        int firstSlot = compact ? page * pageSize : 0;
+        int lastSlot = compact
+                ? Math.min(CopyLKeyMappings.SLOT_COUNT, firstSlot + pageSize)
+                : CopyLKeyMappings.SLOT_COUNT;
 
         for (int i = firstSlot; i < lastSlot; i++) {
             int local = compact ? i - firstSlot : i;
@@ -78,39 +81,66 @@ public final class MessageEditorScreen extends Screen {
             int row = compact ? local : local % 5;
             int cardLeft = left + column * (columnWidth + 12);
             int y = top + row * rowStep;
-
-            int keyWidth = compact
-                    ? Math.min(76, Math.max(54, columnWidth / 4))
-                    : 86;
-            int nameWidth = compact
-                    ? Math.min(92, Math.max(58, columnWidth / 4))
-                    : Math.min(92, Math.max(70, columnWidth / 4));
-            int messageWidth = Math.max(50, columnWidth - nameWidth - keyWidth - 10);
-
-            EditBox name = new EditBox(font, cardLeft, y, nameWidth, fieldHeight, Component.literal("Nombre " + (i + 1)));
-            name.setMaxLength(MAX_NAME_LENGTH);
-            name.setValue(draftNames[i]);
-            name.setHint(Component.literal("Nombre"));
-            nameFields[i] = addRenderableWidget(name);
-
-            EditBox message = new EditBox(font, cardLeft + nameWidth + 5, y, messageWidth, fieldHeight,
-                    Component.literal("Mensaje " + (i + 1)));
-            message.setMaxLength(MAX_MESSAGE_LENGTH);
-            message.setValue(draftMessages[i]);
-            message.setHint(Component.literal("Mensaje o /comando..."));
-            messageFields[i] = addRenderableWidget(message);
-
             final int slot = i;
-            keyButtons[i] = addRenderableWidget(Button.builder(keyLabel(i), b -> {
-                captureFields();
-                bindingIndex = slot;
-                warning = "";
-                updateKeyLabels();
-            }).bounds(cardLeft + columnWidth - keyWidth, y, keyWidth, fieldHeight).build());
+
+            if (tiny) {
+                int keyWidth = Math.min(82, Math.max(48, columnWidth / 3));
+                int nameWidth = Math.max(40, columnWidth - keyWidth - 5);
+
+                EditBox name = new EditBox(font, cardLeft, y, nameWidth, fieldHeight,
+                        Component.literal("Nombre " + (i + 1)));
+                name.setMaxLength(MAX_NAME_LENGTH);
+                name.setValue(draftNames[i]);
+                name.setHint(Component.literal("Nombre"));
+                nameFields[i] = addRenderableWidget(name);
+
+                keyButtons[i] = addRenderableWidget(Button.builder(keyLabel(i), b -> {
+                    captureFields();
+                    bindingIndex = slot;
+                    warning = "";
+                    updateKeyLabels();
+                }).bounds(cardLeft + nameWidth + 5, y, keyWidth, fieldHeight).build());
+
+                EditBox message = new EditBox(font, cardLeft, y + fieldHeight + 3, columnWidth, fieldHeight,
+                        Component.literal("Mensaje " + (i + 1)));
+                message.setMaxLength(MAX_MESSAGE_LENGTH);
+                message.setValue(draftMessages[i]);
+                message.setHint(Component.literal("Mensaje o /comando..."));
+                messageFields[i] = addRenderableWidget(message);
+            } else {
+                int keyWidth = compact
+                        ? Math.min(76, Math.max(54, columnWidth / 4))
+                        : 86;
+                int nameWidth = compact
+                        ? Math.min(92, Math.max(58, columnWidth / 4))
+                        : Math.min(92, Math.max(70, columnWidth / 4));
+                int messageWidth = Math.max(50, columnWidth - nameWidth - keyWidth - 10);
+
+                EditBox name = new EditBox(font, cardLeft, y, nameWidth, fieldHeight,
+                        Component.literal("Nombre " + (i + 1)));
+                name.setMaxLength(MAX_NAME_LENGTH);
+                name.setValue(draftNames[i]);
+                name.setHint(Component.literal("Nombre"));
+                nameFields[i] = addRenderableWidget(name);
+
+                EditBox message = new EditBox(font, cardLeft + nameWidth + 5, y, messageWidth, fieldHeight,
+                        Component.literal("Mensaje " + (i + 1)));
+                message.setMaxLength(MAX_MESSAGE_LENGTH);
+                message.setValue(draftMessages[i]);
+                message.setHint(Component.literal("Mensaje o /comando..."));
+                messageFields[i] = addRenderableWidget(message);
+
+                keyButtons[i] = addRenderableWidget(Button.builder(keyLabel(i), b -> {
+                    captureFields();
+                    bindingIndex = slot;
+                    warning = "";
+                    updateKeyLabels();
+                }).bounds(cardLeft + columnWidth - keyWidth, y, keyWidth, fieldHeight).build());
+            }
         }
 
         if (compact) {
-            int pagerY = tight ? 17 : 30;
+            int pagerY = tight ? 18 : 31;
             Button previous = addRenderableWidget(Button.builder(Component.literal("◀"), b -> {
                 if (page > 0) {
                     captureFields();
@@ -122,20 +152,20 @@ public final class MessageEditorScreen extends Screen {
             previous.active = page > 0;
 
             Button next = addRenderableWidget(Button.builder(Component.literal("▶"), b -> {
-                if (page < 1) {
+                if (page < maxPage) {
                     captureFields();
                     bindingIndex = -1;
                     page++;
                     rebuildWidgets();
                 }
             }).bounds(width / 2 + 34, pagerY, 28, 16).build());
-            next.active = page < 1;
+            next.active = page < maxPage;
         }
 
-        int visibleRows = compact ? COMPACT_PAGE_SIZE : 5;
+        int visibleRows = compact ? pageSize : 5;
         int bottom = top + rowStep * visibleRows + (tight ? 1 : 5);
         int actionHeight = tight ? 18 : 20;
-        int actionWidth = Math.min(104, Math.max(84, (contentWidth - 8) / 2));
+        int actionWidth = Math.min(112, Math.max(66, (contentWidth - 8) / 2));
         addRenderableWidget(Button.builder(Component.literal("Guardar cambios"), b -> saveAndClose())
                 .bounds(width / 2 - actionWidth - 4, bottom, actionWidth, actionHeight).build());
         addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> cancelAndClose())
@@ -144,6 +174,16 @@ public final class MessageEditorScreen extends Screen {
 
     private boolean useCompactLayout() {
         return width < 620 || height < 280;
+    }
+
+    private boolean useTinyLayout() {
+        return useCompactLayout() && width < 340;
+    }
+
+    private int pageSize() {
+        if (!useCompactLayout()) return CopyLKeyMappings.SLOT_COUNT;
+        if (useTinyLayout()) return height < 220 ? 2 : 3;
+        return COMPACT_PAGE_SIZE;
     }
 
     private Component keyLabel(int slot) {
@@ -224,21 +264,23 @@ public final class MessageEditorScreen extends Screen {
         renderBackground(graphics);
         boolean compact = useCompactLayout();
         boolean tight = height < 220;
+        int pageSize = pageSize();
+        int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
 
         graphics.drawCenteredString(font, title, width / 2, tight ? 5 : 10, 0xFFFFFFFF);
         if (compact) {
-            int first = page * COMPACT_PAGE_SIZE + 1;
-            int last = Math.min(CopyLKeyMappings.SLOT_COUNT, first + COMPACT_PAGE_SIZE - 1);
+            int first = page * pageSize + 1;
+            int last = Math.min(CopyLKeyMappings.SLOT_COUNT, first + pageSize - 1);
             String summary = "Slots " + first + "–" + last + " · Ctrl+Enter guarda · Esc cancela";
             if (!tight) {
                 graphics.drawCenteredString(font,
-                        font.plainSubstrByWidth(summary, Math.max(160, width - 24)),
+                        font.plainSubstrByWidth(summary, Math.max(80, width - 20)),
                         width / 2,
                         21,
                         0xFFAAB7C4);
             }
             graphics.drawCenteredString(font,
-                    (page + 1) + "/2",
+                    (page + 1) + "/" + (maxPage + 1),
                     width / 2,
                     tight ? 21 : 34,
                     0xFF7F93A6);
@@ -249,15 +291,20 @@ public final class MessageEditorScreen extends Screen {
                     28,
                     0xFFAAB7C4);
             graphics.drawCenteredString(font,
-                    "Variables: {pos} {x} {y} {z} {dim} {hp} {food} {name}  ·  Ctrl+Enter: guardar",
+                    "Jugador: {pos} {x} {y} {z} {dim} {hp} {food} {name}",
                     width / 2,
                     43,
                     0xFF7F93A6);
+            graphics.drawCenteredString(font,
+                    "Objetivo: {target} {targetdist} {targetpos} {targetx} {targety} {targetz}",
+                    width / 2,
+                    56,
+                    0xFF71879A);
         }
 
         if (!warning.isBlank() && System.currentTimeMillis() <= warningUntil) {
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth(warning, Math.max(160, width - 20)),
+                    font.plainSubstrByWidth(warning, Math.max(80, width - 20)),
                     width / 2,
                     height - 10,
                     0xFFFFB28A);

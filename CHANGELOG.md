@@ -2,6 +2,52 @@
 
 Todos los cambios importantes de Lclient se documentan aquí.
 
+## 2.7.0 — Información táctica y UX
+
+### Notification Center
+
+- Nuevo HUD de avisos no-chat con severidades, deduplicación, fade y entre 1–5 tarjetas simultáneas.
+- Duración configurable entre 2–10 segundos.
+- Historial de hasta 48 avisos por sesión, con paginación y limpieza manual; no se persiste al disco.
+- Avisos de activación/desactivación de módulos y estados de Recon.
+- Smart Offhand informa cuándo equipa/restaura comida o cuándo abandona una restauración por seguridad.
+- Alertas críticas opcionales para vida ≤25%, inventario lleno, item de mano ≤10% de durabilidad y armadura ≤10%.
+- Las alertas críticas sólo se disparan al entrar en el estado o cambiar el objeto crítico, evitando spam por tick.
+
+### CopyL
+
+- Variables de objetivo `{target}`, `{targetdist}`, `{targetpos}`, `{targetx}`, `{targety}` y `{targetz}`.
+- Durante Recon usa el raycast largo; fuera de Recon usa el objetivo vanilla del cliente.
+- Editor ultracompacto de dos líneas por slot para ventanas angostas.
+- Paginación dinámica de 2/3/5 slots según espacio disponible.
+- Ayuda de variables actualizada dentro del propio editor.
+
+### Loot ESP
+
+- Nueva lista HUD opcional de loot cercano agrupada por item, con cantidad y distancia.
+- Reutiliza la caché existente; no realiza un segundo escaneo de entidades.
+- Caché ordenada una vez por escaneo para servir al renderer y al HUD.
+- Beacon y lista HUD se configuran de forma independiente desde Loot ESP.
+- Ajustes de módulo eliminan el antiguo ancho mínimo de 180 px.
+
+### Advanced Recon
+
+- Target Panel muestra item de mano/offhand y cantidad de piezas de armadura visibles cuando esos datos existen en el cliente.
+- Conserva fallbacks seguros ante nombres, tipos, vida o items modded defectuosos.
+
+### Smart Offhand
+
+- Feedback integrado en Notification Center para equipar/restaurar.
+- Aviso explícito cuando una restauración se abandona porque el slot original ya no coincide.
+- Mantiene restauración exacta por item/tags/cantidad y aislamiento de hooks modded.
+
+### Configuración e interfaz
+
+- `lclient.json` añade opciones para Notification Center, alertas críticas y HUD de Loot ESP.
+- Config global adapta siete filas de controles a ventanas bajas/GUI Scale alto.
+- Historial de avisos y ajustes de módulo son responsive en resoluciones estrechas.
+- Texto interno de notificaciones trunca Unicode sin partir pares UTF-16.
+
 ## 2.6.0 — Hardening completo
 
 ### Estabilidad

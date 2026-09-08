@@ -122,9 +122,6 @@ public final class LootEspRenderer {
             }
         }
 
-        // We own this dedicated RenderType. Always close the batch once a
-        // buffer was requested, even if every cached entity became invalid
-        // between the scan and this frame.
         buffers.endBatch(lineType);
     }
 
@@ -164,16 +161,23 @@ public final class LootEspRenderer {
             return;
         }
 
-        // In extreme farms/explosions, keep the nearest drops first. The cap
-        // affects only rendering cost; it does not query or expose extra data.
+        // Keep the cache distance-sorted once per scan. Both the world renderer
+        // and the compact HUD can now reuse the same ordering without another
+        // entity scan or a per-frame sort.
+        found.sort(Comparator
+                .comparingDouble((ItemEntity item) -> item.distanceToSqr(minecraft.player))
+                .thenComparing((ItemEntity item) -> -item.getItem().getCount()));
+
         if (found.size() > MAX_RENDERED_ITEMS) {
-            found.sort(Comparator
-                    .comparingDouble((ItemEntity item) -> item.distanceToSqr(minecraft.player))
-                    .thenComparing((ItemEntity item) -> -item.getItem().getCount()));
             cachedItems = new ArrayList<>(found.subList(0, MAX_RENDERED_ITEMS));
         } else {
             cachedItems = new ArrayList<>(found);
         }
+    }
+
+    /** Read-only-by-convention view reused by the HUD on the render thread. */
+    static List<ItemEntity> cachedItemsView() {
+        return cachedItems;
     }
 
     public static void clearCache() {

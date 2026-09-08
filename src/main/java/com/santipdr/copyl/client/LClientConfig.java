@@ -28,6 +28,8 @@ public final class LClientConfig {
     public int lootEspMinStack = 1;
     /** Adds a taller no-depth marker so loot remains obvious behind thick terrain. */
     public boolean lootEspBeacon = true;
+    /** Compact top-left summary of nearest grouped drops. */
+    public boolean lootEspHud = true;
 
     public boolean smartOffhand = true;
     public int foodThreshold = 14;
@@ -48,6 +50,15 @@ public final class LClientConfig {
     public boolean journeyMap = true;
     public boolean journeyMapReconWaypoint = true;
 
+    /** Global, non-chat status surface shared by Lclient modules. */
+    public boolean notifications = true;
+    /** Gameplay conditions such as low health, full inventory and critical durability. */
+    public boolean notificationGameplayAlerts = true;
+    /** Lifetime of a notification card. */
+    public int notificationDurationSeconds = 5;
+    /** Maximum simultaneous cards on screen. */
+    public int notificationMaxVisible = 3;
+
     public static synchronized LClientConfig get() {
         if (instance == null) instance = load();
         return instance;
@@ -67,11 +78,7 @@ public final class LClientConfig {
             String before = GSON.toJson(config);
             config.sanitize();
             String after = GSON.toJson(config);
-            if (!before.equals(after)) {
-                // Persist migrations/repairs once instead of re-fixing the same
-                // invalid values on every Minecraft start.
-                AtomicConfigIO.write(PATH, after);
-            }
+            if (!before.equals(after)) AtomicConfigIO.write(PATH, after);
             return config;
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(PATH);
@@ -103,15 +110,16 @@ public final class LClientConfig {
         if (smartOffhandFoodId == null) smartOffhandFoodId = "";
         smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(Locale.ROOT);
         if (smartOffhandFoodId.length() > 128) smartOffhandFoodId = smartOffhandFoodId.substring(0, 128);
-        if (!smartOffhandFoodId.isEmpty() && ResourceLocation.tryParse(smartOffhandFoodId) == null) {
-            smartOffhandFoodId = "";
-        }
+        if (!smartOffhandFoodId.isEmpty() && ResourceLocation.tryParse(smartOffhandFoodId) == null) smartOffhandFoodId = "";
 
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
         reconZoomFov = clamp(reconZoomFov, 8, 50, 24);
         reconRange = clamp(reconRange, 64, 512, 256);
+
+        notificationDurationSeconds = clamp(notificationDurationSeconds, 2, 10, 5);
+        notificationMaxVisible = clamp(notificationMaxVisible, 1, 5, 3);
     }
 
     private static int sanitizeKey(int key, int fallback) {

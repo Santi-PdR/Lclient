@@ -31,6 +31,7 @@ public final class ModuleSettingsScreen extends Screen {
     private Button tertiaryButton;
     private Button actionButton;
     private Button quaternaryButton;
+    private Button quinaryButton;
     private CaptureTarget captureTarget = CaptureTarget.NONE;
     private String feedback = "";
     private long feedbackUntil;
@@ -49,7 +50,7 @@ public final class ModuleSettingsScreen extends Screen {
         int buttonHeight = compact ? 18 : 20;
         int step = tight ? 21 : compact ? 23 : 27;
         int startY = tight ? 34 : compact ? 50 : height / 2 - 66;
-        int buttonWidth = Math.min(240, Math.max(180, width - 24));
+        int buttonWidth = Math.min(240, Math.max(120, width - 24));
         int left = cx - buttonWidth / 2;
 
         enabledButton = addRenderableWidget(Button.builder(enabledLabel(), b -> {
@@ -65,8 +66,10 @@ public final class ModuleSettingsScreen extends Screen {
                 .bounds(left, startY + step * 3, buttonWidth, buttonHeight).build());
         quaternaryButton = addRenderableWidget(Button.builder(quaternaryLabel(), b -> quaternaryAction())
                 .bounds(left, startY + step * 4, buttonWidth, buttonHeight).build());
+        quinaryButton = addRenderableWidget(Button.builder(quinaryLabel(), b -> quinaryAction())
+                .bounds(left, startY + step * 5, buttonWidth, buttonHeight).build());
 
-        int backY = startY + step * 5 + (compact ? 2 : 7);
+        int backY = startY + step * 6 + (compact ? 2 : 7);
         addRenderableWidget(Button.builder(Component.literal("Volver a la ruleta"), b -> onClose())
                 .bounds(left, backY, buttonWidth, buttonHeight).build());
 
@@ -121,6 +124,14 @@ public final class ModuleSettingsScreen extends Screen {
             case LOOT_ESP -> Component.literal("Marcador vertical tras paredes: " + yesNo(c.lootEspBeacon));
             case SMART_OFFHAND -> Component.literal("Si falta la elegida, usar AUTO: " + yesNo(c.smartOffhandFallbackToAuto));
             case RECON -> Component.literal("Zoom guardado: FOV " + c.reconZoomFov + " (rueda en vivo)");
+            default -> Component.literal("");
+        };
+    }
+
+    private Component quinaryLabel() {
+        LClientConfig c = LClientConfig.get();
+        return switch (module) {
+            case LOOT_ESP -> Component.literal("Lista HUD de loot cercano: " + yesNo(c.lootEspHud));
             default -> Component.literal("");
         };
     }
@@ -185,17 +196,27 @@ public final class ModuleSettingsScreen extends Screen {
         refreshLabels();
     }
 
+    private void quinaryAction() {
+        if (module != LClientWheelScreen.Module.LOOT_ESP) return;
+        LClientConfig c = LClientConfig.get();
+        c.lootEspHud = !c.lootEspHud;
+        c.save();
+        refreshLabels();
+    }
+
     private void refreshLabels() {
         if (enabledButton != null) enabledButton.setMessage(enabledLabel());
         if (secondaryButton != null) secondaryButton.setMessage(secondaryLabel());
         if (tertiaryButton != null) tertiaryButton.setMessage(tertiaryLabel());
         if (actionButton != null) actionButton.setMessage(actionLabel());
         if (quaternaryButton != null) quaternaryButton.setMessage(quaternaryLabel());
+        if (quinaryButton != null) quinaryButton.setMessage(quinaryLabel());
         updateVisibility();
     }
 
     private void updateVisibility() {
-        if (secondaryButton == null || tertiaryButton == null || actionButton == null || quaternaryButton == null) return;
+        if (secondaryButton == null || tertiaryButton == null || actionButton == null
+                || quaternaryButton == null || quinaryButton == null) return;
         secondaryButton.visible = module != LClientWheelScreen.Module.COPYL;
         tertiaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
                 || module == LClientWheelScreen.Module.SMART_OFFHAND
@@ -207,6 +228,7 @@ public final class ModuleSettingsScreen extends Screen {
         quaternaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
                 || module == LClientWheelScreen.Module.SMART_OFFHAND
                 || module == LClientWheelScreen.Module.RECON;
+        quinaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP;
     }
 
     private static int cycle(int current, int... values) {
@@ -334,7 +356,7 @@ public final class ModuleSettingsScreen extends Screen {
         renderBackground(graphics);
         boolean compact = height < 250;
         boolean tight = height < 200;
-        int maxTextWidth = Math.max(160, width - 24);
+        int maxTextWidth = Math.max(80, width - 24);
 
         graphics.drawCenteredString(font, module.title, width / 2, tight ? 5 : 10, 0xFFFFFFFF);
         graphics.drawCenteredString(font,
@@ -345,7 +367,7 @@ public final class ModuleSettingsScreen extends Screen {
 
         if (!tight) {
             String info = switch (module) {
-                case LOOT_ESP -> "X-ray propio; sólo items cargados por el cliente.";
+                case LOOT_ESP -> "X-ray + lista agrupada; sólo items cargados por el cliente.";
                 case SMART_OFFHAND -> "AUTO usa comida segura; selección exacta respeta tu elección.";
                 case RECON -> "Mantén Zoom; rueda ajusta; waypoint usa el raycast largo.";
                 case JOURNEYMAP -> JourneyMapBridge.getStatusText();

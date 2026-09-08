@@ -14,84 +14,146 @@ Todo se controla desde una única ruleta. Los cinco módulos actuales son:
 
 La tecla de apertura de la ruleta **no se registra en Opciones > Controles**. Se cambia desde `Mods > Lclient > Config`. Las teclas internas de CopyL, Loot ESP y Recon se editan desde la propia ruleta.
 
-Lclient protege teclas reservadas y sincroniza el estado físico de las teclas para evitar dobles acciones o activaciones fantasma al cerrar menús/reasignar controles.
+Lclient protege teclas reservadas, sincroniza el estado físico de las teclas y mantiene las funciones informativas separadas del chat.
 
-## Lclient 2.6.0
+## Lclient 2.7.0
 
-2.6 es una pasada completa de hardening, compatibilidad con packs modded, rendimiento y UI responsive.
+2.7 añade una capa de información táctica sobre la base endurecida de 2.6 sin reintroducir módulos eliminados ni duplicar funciones que ya cubren otros mods del pack.
 
-### JourneyMap+
+### Notification Center
 
-Integración opcional preparada para JourneyMap 1.20.1-5.10.x / API 1.9:
+Nuevo centro de avisos no invasivo:
 
-- Sigue `MAPPING_STARTED`, `MAPPING_STOPPED` y `DISPLAY_UPDATE`.
-- No conserva objetos `Waypoint` de una sesión anterior.
-- Recon usa un display ID estable (`lclient_recon`).
-- El waypoint es transitorio y se reconstruye cuando JourneyMap pide refrescar displays.
-- El estado de mapping/permiso se consulta de forma limitada, no cada frame.
-- El bridge opcional cachea reflexión y puede reintentar si JourneyMap todavía no terminó de iniciar.
-- La ruleta muestra diagnósticos reales de la integración.
-- Desactivar JourneyMap+, Recon o el waypoint de Recon limpia el marcador de Lclient.
-- JourneyMap sigue siendo `compileOnly`/opcional: Lclient puede iniciar sin él.
+- tarjetas discretas en la esquina inferior derecha;
+- severidades INFO, SUCCESS, WARNING y ERROR;
+- deduplicación de eventos rápidos;
+- duración configurable entre 2 y 10 segundos;
+- entre 1 y 5 avisos simultáneos;
+- se oculta mientras otra pantalla está abierta;
+- historial de hasta 48 eventos durante la sesión;
+- el historial no se persiste al disco;
+- puede desactivarse por completo desde `Mods > Lclient > Config`.
+
+Alertas críticas opcionales:
+
+- vida ≤25%;
+- inventario principal sin slots libres;
+- item de mano con ≤10% de durabilidad;
+- pieza de armadura más dañada con ≤10% de durabilidad.
+
+Las alertas se generan al **entrar** en un estado crítico o al cambiar el objeto crítico; no se repiten en cada tick.
+
+También recibe cambios de estado de módulos, resultados de Recon/waypoints y feedback de Smart Offhand.
 
 ### CopyL
 
 - 10 slots de mensajes o comandos con nombre propio.
-- Editor transaccional: **Guardar** aplica el conjunto completo; **Cancelar** no deja cambios parciales.
-- En GUI compacta los 10 slots se reparten en 2 páginas de 5 para evitar solapamientos.
-- `Ctrl+Enter` guarda.
-- Redimensionar conserva borradores.
-- Teclas duplicadas o reservadas se reparan automáticamente.
-- Al reasignar una tecla, Lclient primero sincroniza su estado físico: mantenerla pulsada no dispara el mensaje al cerrar el editor.
-- Abrir/cerrar inventario u otras pantallas manteniendo un atajo tampoco genera un envío fantasma.
-- Variables: `{pos}`, `{x}`, `{y}`, `{z}`, `{dim}`, `{hp}`, `{food}`, `{name}`.
-- El mensaje final vuelve a limitarse después de expandir variables.
-- El límite respeta pares UTF-16 para no partir emojis/símbolos a la mitad.
-- `copyl-messages.json` migra automáticamente arrays incompletos, teclas inválidas/duplicadas/conflictivas, controles invisibles y texto mal formado.
+- Editor transaccional: **Guardar** aplica todo; **Cancelar** descarta el borrador completo.
+- `Ctrl+Enter` guarda rápidamente.
+- Redimensionar conserva cambios sin guardar.
+- Teclas duplicadas/reservadas se reparan y protegen.
+- No dispara mensajes fantasma al cerrar pantallas o reasignar controles.
+- En ventanas angostas usa un layout ultracompacto de **dos líneas por slot**.
+- La paginación se calcula dinámicamente: 2, 3 o 5 slots por página según tamaño/GUI Scale.
+
+Variables del jugador:
+
+- `{pos}`
+- `{x}` `{y}` `{z}`
+- `{dim}`
+- `{hp}`
+- `{food}`
+- `{name}`
+
+Variables nuevas de objetivo:
+
+- `{target}` — nombre de entidad o ID del bloque;
+- `{targetdist}` — distancia aproximada;
+- `{targetpos}` — coordenadas completas;
+- `{targetx}` `{targety}` `{targetz}`.
+
+Si Advanced Recon está haciendo zoom, CopyL usa su **raycast largo** como objetivo. Fuera de Recon usa el `hitResult` vanilla. Nunca inventa entidades/bloques no recibidos por el cliente.
+
+El texto final mantiene el límite de 256 caracteres y no corta pares UTF-16/emoji a la mitad.
 
 ### Loot ESP
 
-- Render propio `NO_DEPTH_TEST`: cajas visibles **a través de paredes y terreno**.
-- Marcador vertical x-ray opcional.
+- Render `NO_DEPTH_TEST`: cajas visibles a través de paredes y terreno.
+- Beacon vertical x-ray opcional.
 - Alcance, stack mínimo y tecla configurables; `X` por defecto.
-- Sólo representa `ItemEntity` que ya existen en el `ClientLevel` recibido por el cliente.
-- Escaneo cacheado durante ~100 ms en lugar de recorrer el área cada frame.
-- La caché se libera al desactivar el módulo o salir del mundo/servidor para no retener un `ClientLevel` viejo.
-- En acumulaciones extremas (granjas, explosiones, cientos de drops), el render prioriza hasta 256 items cercanos para proteger FPS.
+- Sólo usa `ItemEntity` existentes en el `ClientLevel`.
+- Escaneo cacheado ~100 ms en vez de recorrer el área cada frame.
+- Caché ordenada por distancia y limitada a los 256 drops más cercanos en acumulaciones patológicas.
+- Limpieza de caché al desactivar/salir para no retener mundos anteriores.
+
+Nuevo HUD de loot cercano:
+
+- **opcional** e independiente del beacon;
+- agrupa drops cercanos por tipo de item;
+- muestra nombre, cantidad total del grupo y distancia del drop más cercano;
+- hasta 5 grupos visibles;
+- reutiliza la caché de Loot ESP: no lanza otro `getEntitiesOfClass`;
+- resumen actualizado a intervalos cortos, no cada frame.
 
 ### Smart Offhand
 
-- `AUTO` o una comida exacta por registry ID, incluyendo alimentos modded.
-- Fallback AUTO opcional cuando falta la seleccionada.
+- `AUTO` o comida exacta por registry ID, incluyendo modded.
+- Fallback AUTO opcional.
 - Umbrales de colocar/restaurar configurables.
-- Usa propiedades de comida del **ItemStack real**, importante para items con NBT/capabilities.
 - AUTO considera nutrición, saturación, cantidad y penaliza efectos perjudiciales.
-- Una selección manual sigue teniendo prioridad: el ranking AUTO no reemplaza tu elección.
-- Hooks defectuosos de `isEdible`, propiedades de comida o nombres de items modded se aíslan para no tirar Lclient.
-- Antes de restaurar verifica item, tags **y cantidad exacta** del stack original.
-- Si restaurar es temporalmente inseguro porque el cursor del inventario está ocupado, espera en vez de olvidar la transacción.
-- Si otro mod/jugador modificó el slot original, Lclient abandona la restauración antes que mover un stack equivocado.
-- Al desconectarse hace un último intento seguro y limpia todo estado transitorio.
+- Usa propiedades del `ItemStack` real.
+- Antes de restaurar verifica item, tags y **cantidad exacta** del stack original.
+- Si el cursor está ocupado puede diferir la restauración.
+- Si otro sistema modificó el slot original, abandona antes de mover un stack incorrecto.
+
+Nuevo feedback por Notification Center:
+
+- comida equipada automáticamente;
+- offhand restaurada;
+- restauración cancelada porque el slot original cambió.
+
+Los hooks defectuosos de alimentos/nombres modded siguen aislados para no tirar el cliente.
 
 ### Advanced Recon
 
 Teclas por defecto:
 
 - Zoom: `C` (mantener).
-- Waypoint: `V` (sólo mientras Recon está haciendo zoom).
+- Waypoint: `V` (durante zoom).
 
-Mientras Recon está activo:
+Recon mantiene:
 
-1. La rueda cambia magnificación y no mueve la hotbar.
-2. Ruedas de alta resolución/trackpads acumulan deltas fraccionarios antes de cambiar un paso de zoom.
-3. Recon nunca aumenta el FOV respecto al FOV real del jugador; un preset viejo no puede convertirse en "zoom-out".
-4. El zoom es render-only: no sobrescribe Video Settings.
-5. Los cambios rápidos del zoom se guardan con debounce.
-6. El raycast largo se cachea unos milisegundos cuando cámara/mira no cambian, reduciendo búsquedas repetidas de hasta 512 bloques.
-7. Crear un waypoint **fuerza un raycast fresco**, por lo que marca donde estás mirando en ese momento.
-8. Entidades con hooks modded defectuosos de colisión/pickability se ignoran de forma segura; Recon conserva el resultado de bloques/dirección.
-9. Nombres, tipos y vida del Target Panel tienen fallbacks seguros para entidades custom.
-10. El HUD/Target Panel sólo existen durante el zoom y se adaptan a GUI Scale alto/pantallas compactas.
+1. zoom render-only que no sobrescribe Video Settings;
+2. rueda de magnificación sin mover hotbar;
+3. soporte de rueda fraccionaria/trackpad;
+4. FOV que nunca se abre más que el FOV real;
+5. guardado con debounce;
+6. raycast largo cacheado brevemente;
+7. raycast fresco obligatorio al crear waypoint;
+8. tolerancia a hooks rotos de entidades/bloques modded;
+9. HUD y Target Panel sólo durante zoom;
+10. JourneyMap+ opcional para waypoint táctico.
+
+El Target Panel ahora añade, cuando el cliente lo conoce:
+
+- item de mano principal;
+- offhand cuando la mano principal está vacía;
+- número de piezas de armadura visibles (`N/4`);
+- además de nombre, tipo, distancia, coordenadas y HP.
+
+Los nombres/tipos/items/vida usan fallbacks para entidades o items modded defectuosos.
+
+### JourneyMap+
+
+La integración opcional sigue preparada para JourneyMap 1.20.1-5.10.x / API 1.9:
+
+- `MAPPING_STARTED`, `MAPPING_STOPPED` y `DISPLAY_UPDATE`;
+- display ID estable `lclient_recon`;
+- waypoint no persistente reconstruible;
+- no conserva objetos `Waypoint` entre sesiones;
+- diagnósticos de estado reales;
+- bridge reflejado cacheado;
+- JourneyMap sigue siendo `compileOnly`/no obligatorio.
 
 ## Configuración resistente a fallos
 
@@ -99,21 +161,23 @@ Mientras Recon está activo:
 
 Si un JSON está corrupto:
 
-1. Se mueve a `*.broken-<timestamp>`.
-2. Se crea una configuración válida.
-3. El cliente no vuelve a fallar leyendo el mismo archivo en cada inicio.
+1. se mueve a `*.broken-<timestamp>`;
+2. se crea una configuración válida;
+3. Lclient no vuelve a leer el mismo archivo roto en cada inicio.
 
-Además, si una config es legible pero contiene rangos, keycodes, conflictos o IDs inválidos, Lclient los sanea **y persiste la reparación una sola vez**.
+Configs legibles pero antiguas/incorrectas se sanea y migran una sola vez: rangos, keycodes, conflictos, IDs y estructuras incompletas.
 
 ## Ruleta e interfaces
 
 - Click izquierdo: configurar módulo.
 - Click derecho: activar/desactivar.
-- Radios/zonas de selección de la ruleta se adaptan al tamaño GUI.
-- CopyL usa paginación automática cuando no caben dos columnas.
-- Selector de comida reduce opciones por página en ventanas bajas.
-- Recon oculta el panel lateral cuando invadiría la retícula y conserva la información esencial en la línea central.
-- Configuración global y pantallas de módulos ajustan anchura/altura a GUI compacta.
+- Ruleta responsive.
+- Ajustes de módulo sin el antiguo mínimo fijo de 180 px.
+- CopyL tiene layout normal, compacto y ultracompacto.
+- Selector de comida ajusta paginación a la altura.
+- Notification History pagina según espacio disponible.
+- Recon oculta el panel lateral si invadiría la retícula.
+- Configuración global adapta alturas, botones y texto a GUI Scale alto.
 
 ## Compatibilidad
 
@@ -133,10 +197,10 @@ GitHub Actions:
 
 - compila con Java 17;
 - selecciona exactamente `lclient-<version>.jar`;
-- valida que el JAR se pueda abrir y contenga `META-INF/mods.toml` y la clase principal;
-- calcula SHA-256 del mismo archivo validado;
+- valida que el JAR se abra y contenga `META-INF/mods.toml` y la clase principal;
+- calcula SHA-256 del mismo archivo;
 - cancela builds anteriores de la misma rama cuando aparece uno nuevo;
-- impide que un build viejo de `main` sobrescriba un payload más reciente;
+- evita que un build viejo de `main` sobrescriba uno más reciente;
 - publica en `build-output` `lclient-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt`.
 
-El PowerShell de despliegue sólo necesita descargar ese payload, verificar SHA-256 y copiar el JAR a la instancia; no necesita compilar localmente.
+El PowerShell de despliegue sólo necesita descargar el payload publicado, verificar SHA-256 y copiar el JAR a la instancia; no necesita compilar localmente.
