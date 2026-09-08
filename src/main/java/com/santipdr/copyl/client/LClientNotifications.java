@@ -284,7 +284,7 @@ public final class LClientNotifications {
         if (percent < 0 || percent > 10) return "";
         try {
             var id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-            return (id == null ? "item" : id.toString()) + ':' + stack.getDamageValue() + ':' + stack.getMaxDamage();
+            return (id == null ? "item" : id.toString()) + ':' + stack.getMaxDamage();
         } catch (RuntimeException | LinkageError ignored) {
             return "";
         }
