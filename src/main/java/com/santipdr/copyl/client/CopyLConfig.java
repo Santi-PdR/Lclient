@@ -48,7 +48,7 @@ public final class CopyLConfig {
 
             config.sanitize();
             AtomicConfigIO.write(PATH, GSON.toJson(config));
-            Files.deleteIfExists(LEGACY_PATH);
+            cleanupLegacyConfig();
             return config;
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(source);
@@ -57,6 +57,16 @@ public final class CopyLConfig {
             CopyLConfig config = new CopyLConfig();
             config.save();
             return config;
+        }
+    }
+
+    private static void cleanupLegacyConfig() {
+        try {
+            Files.deleteIfExists(LEGACY_PATH);
+        } catch (Exception exception) {
+            // Cleanup is best-effort only. A locked legacy file must never invalidate copyl.json.
+            System.err.println("[CopyL] No se pudo borrar la configuración antigua " + LEGACY_PATH
+                    + ": " + exception.getMessage());
         }
     }
 
