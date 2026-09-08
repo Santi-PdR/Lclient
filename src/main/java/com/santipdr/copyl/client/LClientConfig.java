@@ -52,6 +52,8 @@ public final class LClientConfig {
 
     /** Global, non-chat status surface shared by Lclient modules. */
     public boolean notifications = true;
+    /** Gameplay conditions such as low health, full inventory and critical durability. */
+    public boolean notificationGameplayAlerts = true;
     /** Lifetime of a notification card. */
     public int notificationDurationSeconds = 5;
     /** Maximum simultaneous cards on screen. */
@@ -76,9 +78,7 @@ public final class LClientConfig {
             String before = GSON.toJson(config);
             config.sanitize();
             String after = GSON.toJson(config);
-            if (!before.equals(after)) {
-                AtomicConfigIO.write(PATH, after);
-            }
+            if (!before.equals(after)) AtomicConfigIO.write(PATH, after);
             return config;
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(PATH);
@@ -110,9 +110,7 @@ public final class LClientConfig {
         if (smartOffhandFoodId == null) smartOffhandFoodId = "";
         smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(Locale.ROOT);
         if (smartOffhandFoodId.length() > 128) smartOffhandFoodId = smartOffhandFoodId.substring(0, 128);
-        if (!smartOffhandFoodId.isEmpty() && ResourceLocation.tryParse(smartOffhandFoodId) == null) {
-            smartOffhandFoodId = "";
-        }
+        if (!smartOffhandFoodId.isEmpty() && ResourceLocation.tryParse(smartOffhandFoodId) == null) smartOffhandFoodId = "";
 
         foodThreshold = clamp(foodThreshold, 1, 19, 14);
         int minRestore = Math.min(20, foodThreshold + 1);
