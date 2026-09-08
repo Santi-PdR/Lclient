@@ -2,9 +2,9 @@
 
 Lclient es un cliente modular **100% client-side** para Minecraft Forge 1.20.1.
 
-## Diseño
+## Módulos
 
-Todo se controla desde una única ruleta. Los cinco módulos actuales son:
+La ruleta central administra cinco módulos:
 
 - CopyL
 - Loot ESP
@@ -12,172 +12,161 @@ Todo se controla desde una única ruleta. Los cinco módulos actuales son:
 - Advanced Recon
 - JourneyMap+
 
-La tecla de apertura de la ruleta **no se registra en Opciones > Controles**. Se cambia desde `Mods > Lclient > Config`. Las teclas internas de CopyL, Loot ESP y Recon se editan desde la propia ruleta.
+La tecla global de la ruleta no aparece en `Opciones > Controles`: se cambia desde `Mods > Lclient > Config`. Las teclas internas y opciones de módulo viven dentro de la propia ruleta.
 
-Lclient protege teclas reservadas, sincroniza el estado físico de las teclas y mantiene las funciones informativas separadas del chat.
+## Lclient 2.8.0
 
-## Lclient 2.7.0
+2.8 profundiza la capa táctica de 2.7 sin reintroducir módulos descartados ni duplicar funciones de otros mods del pack.
 
-2.7 añade una capa de información táctica sobre la base endurecida de 2.6 sin reintroducir módulos eliminados ni duplicar funciones que ya cubren otros mods del pack.
+### Advanced Recon
 
-### Notification Center
+Recon mantiene zoom render-only, rueda de magnificación, raycast largo configurable y waypoint opcional de JourneyMap.
 
-Nuevo centro de avisos no invasivo:
+Novedades de 2.8:
 
-- tarjetas discretas en la esquina inferior derecha;
-- severidades INFO, SUCCESS, WARNING y ERROR;
-- deduplicación de eventos rápidos;
-- duración configurable entre 2 y 10 segundos;
-- entre 1 y 5 avisos simultáneos;
-- se oculta mientras otra pantalla está abierta;
-- historial de hasta 48 eventos durante la sesión;
-- el historial no se persiste al disco;
-- puede desactivarse por completo desde `Mods > Lclient > Config`.
+- **TRACK estable**: conserva el último objetivo de entidad durante ~650 ms para que el Target Panel no desaparezca por un pequeño movimiento de mira;
+- el TRACK se invalida al dejar de hacer zoom, cambiar de mundo, desconectarse o desaparecer la entidad;
+- crear waypoint sigue obligando a un **raycast fresco**: la memoria visual nunca se usa para marcar una posición vieja;
+- telemetría opcional basada únicamente en entidades ya cargadas por el cliente:
+  - velocidad del objetivo en m/s;
+  - velocidad de cierre/apertura relativa;
+  - movimiento lateral izquierda/derecha;
+  - acercándose/alejándose/estable;
+  - distancia horizontal;
+  - diferencia vertical `ΔY`;
+  - rumbo cardinal;
+  - ángulo del objetivo respecto a la mira;
+- Target Panel movible entre las cuatro esquinas;
+- panel dinámico: sólo reserva filas para datos realmente disponibles;
+- mantiene nombre, tipo, distancia, coordenadas, HP, item visible y cantidad de piezas de armadura.
 
-Alertas críticas opcionales:
+Los hooks defectuosos de entidades/items modded siguen aislados con fallbacks.
 
-- vida ≤25%;
-- inventario principal sin slots libres;
-- item de mano con ≤10% de durabilidad;
-- pieza de armadura más dañada con ≤10% de durabilidad.
+### Loot ESP
 
-Las alertas se generan al **entrar** en un estado crítico o al cambiar el objeto crítico; no se repiten en cada tick.
+Loot ESP continúa usando sólo `ItemEntity` ya presentes en el `ClientLevel`.
 
-También recibe cambios de estado de módulos, resultados de Recon/waypoints y feedback de Smart Offhand.
+- cajas `NO_DEPTH_TEST` a través de terreno;
+- beacon vertical opcional;
+- alcance, stack mínimo y tecla configurables;
+- escaneo corto cacheado;
+- prioridad para los drops más cercanos en acumulaciones grandes;
+- limpieza de caché al desactivar/cambiar de sesión.
+
+El HUD de loot ahora puede mostrar por grupo:
+
+- nombre;
+- cantidad acumulada;
+- distancia del drop más cercano;
+- rumbo cardinal;
+- diferencia vertical `ΔY`.
+
+El HUD reutiliza la misma caché de Loot ESP: **no ejecuta un segundo escaneo de entidades**. Puede moverse entre las cuatro esquinas y la dirección/altura se puede desactivar.
+
+### Smart Offhand
+
+Mantiene selección `AUTO` o comida exacta, fallback opcional y restauración transaccional segura.
+
+2.8 añade protección de combate activada por defecto:
+
+- si la offhand contiene un **tótem** o un **escudo**, Smart Offhand no lo reemplaza automáticamente por comida;
+- emite un único aviso al detectar el objeto protegido, sin repetir cada tick;
+- la protección se puede desactivar desde los ajustes de Smart Offhand;
+- restaurar sigue exigiendo que item, tags y cantidad del slot original coincidan.
 
 ### CopyL
 
-- 10 slots de mensajes o comandos con nombre propio.
-- Editor transaccional: **Guardar** aplica todo; **Cancelar** descarta el borrador completo.
-- `Ctrl+Enter` guarda rápidamente.
-- Redimensionar conserva cambios sin guardar.
-- Teclas duplicadas/reservadas se reparan y protegen.
-- No dispara mensajes fantasma al cerrar pantallas o reasignar controles.
-- En ventanas angostas usa un layout ultracompacto de **dos líneas por slot**.
-- La paginación se calcula dinámicamente: 2, 3 o 5 slots por página según tamaño/GUI Scale.
+Sigue ofreciendo 10 slots con nombre, tecla única, guardado transaccional y layouts normal/compacto/ultracompacto.
 
 Variables del jugador:
 
-- `{pos}`
-- `{x}` `{y}` `{z}`
+- `{pos}`, `{x}`, `{y}`, `{z}`
 - `{dim}`
 - `{hp}`
 - `{food}`
 - `{name}`
+- `{yaw}`
+- `{pitch}`
 
-Variables nuevas de objetivo:
+Variables del objetivo:
 
-- `{target}` — nombre de entidad o ID del bloque;
-- `{targetdist}` — distancia aproximada;
-- `{targetpos}` — coordenadas completas;
-- `{targetx}` `{targety}` `{targetz}`.
+- `{target}`
+- `{targettype}`
+- `{targetdist}`
+- `{targetpos}`, `{targetx}`, `{targety}`, `{targetz}`
+- `{targethp}`, `{targetmaxhp}`
+- `{targetspeed}`
+- `{targetdy}`
+- `{targetbearing}`
+- `{targetmotion}`
+- `{targetitem}`
 
-Si Advanced Recon está haciendo zoom, CopyL usa su **raycast largo** como objetivo. Fuera de Recon usa el `hitResult` vanilla. Nunca inventa entidades/bloques no recibidos por el cliente.
+Con Recon activo usa el raycast largo; fuera de Recon usa `minecraft.hitResult`. No obtiene entidades o bloques que el cliente no conozca.
 
-El texto final mantiene el límite de 256 caracteres y no corta pares UTF-16/emoji a la mitad.
+El editor incorpora una **referencia de variables dentro del juego**, paginada y responsive. Entrar y salir de la ayuda conserva los borradores sin guardar.
 
-### Loot ESP
+### Notification Center
 
-- Render `NO_DEPTH_TEST`: cajas visibles a través de paredes y terreno.
-- Beacon vertical x-ray opcional.
-- Alcance, stack mínimo y tecla configurables; `X` por defecto.
-- Sólo usa `ItemEntity` existentes en el `ClientLevel`.
-- Escaneo cacheado ~100 ms en vez de recorrer el área cada frame.
-- Caché ordenada por distancia y limitada a los 256 drops más cercanos en acumulaciones patológicas.
-- Limpieza de caché al desactivar/salir para no retener mundos anteriores.
+Mantiene tarjetas no-chat, severidad, deduplicación, fade, duración configurable, historial temporal y alertas críticas.
 
-Nuevo HUD de loot cercano:
+2.8 mejora las alertas de inventario:
 
-- **opcional** e independiente del beacon;
-- agrupa drops cercanos por tipo de item;
-- muestra nombre, cantidad total del grupo y distancia del drop más cercano;
-- hasta 5 grupos visibles;
-- reutiliza la caché de Loot ESP: no lanza otro `getEntitiesOfClass`;
-- resumen actualizado a intervalos cortos, no cada frame.
+- avisa al quedar **2 o 1 slots libres**;
+- escala a `Inventario lleno` al llegar a 0;
+- sólo avisa al entrar en cada estado, no cada tick.
 
-### Smart Offhand
+Continúan las alertas para vida ≤25% y durabilidad crítica de item/armadura.
 
-- `AUTO` o comida exacta por registry ID, incluyendo modded.
-- Fallback AUTO opcional.
-- Umbrales de colocar/restaurar configurables.
-- AUTO considera nutrición, saturación, cantidad y penaliza efectos perjudiciales.
-- Usa propiedades del `ItemStack` real.
-- Antes de restaurar verifica item, tags y **cantidad exacta** del stack original.
-- Si el cursor está ocupado puede diferir la restauración.
-- Si otro sistema modificó el slot original, abandona antes de mover un stack incorrecto.
+### Editor de HUD
 
-Nuevo feedback por Notification Center:
+`Mods > Lclient > Config > Distribución y telemetría HUD` permite:
 
-- comida equipada automáticamente;
-- offhand restaurada;
-- restauración cancelada porque el slot original cambió.
+- mover Avisos;
+- mover Loot HUD;
+- mover Recon Panel;
+- activar/desactivar dirección/altura de loot;
+- activar/desactivar telemetría Recon;
+- restaurar el layout por defecto;
+- ver una previsualización de las posiciones.
 
-Los hooks defectuosos de alimentos/nombres modded siguen aislados para no tirar el cliente.
+Los tres paneles no pueden terminar guardados en la misma esquina: la configuración repara automáticamente colisiones y deja una cuarta esquina libre.
 
-### Advanced Recon
+Layout por defecto:
 
-Teclas por defecto:
+- Loot: arriba izquierda;
+- Recon: arriba derecha;
+- Avisos: abajo derecha.
 
-- Zoom: `C` (mantener).
-- Waypoint: `V` (durante zoom).
+### Ruleta como hub
 
-Recon mantiene:
-
-1. zoom render-only que no sobrescribe Video Settings;
-2. rueda de magnificación sin mover hotbar;
-3. soporte de rueda fraccionaria/trackpad;
-4. FOV que nunca se abre más que el FOV real;
-5. guardado con debounce;
-6. raycast largo cacheado brevemente;
-7. raycast fresco obligatorio al crear waypoint;
-8. tolerancia a hooks rotos de entidades/bloques modded;
-9. HUD y Target Panel sólo durante zoom;
-10. JourneyMap+ opcional para waypoint táctico.
-
-El Target Panel ahora añade, cuando el cliente lo conoce:
-
-- item de mano principal;
-- offhand cuando la mano principal está vacía;
-- número de piezas de armadura visibles (`N/4`);
-- además de nombre, tipo, distancia, coordenadas y HP.
-
-Los nombres/tipos/items/vida usan fallbacks para entidades o items modded defectuosos.
+- click izquierdo sobre módulo: configurar;
+- click derecho: activar/desactivar;
+- el centro de la ruleta abre **Configuración global + HUD**;
+- el centro muestra si los avisos globales están activos;
+- cada módulo resume su estado: HUD de Loot, protección `SAFE` de Smart Offhand, telemetría Recon, teclas y alcance.
 
 ### JourneyMap+
 
-La integración opcional sigue preparada para JourneyMap 1.20.1-5.10.x / API 1.9:
+JourneyMap sigue siendo completamente opcional:
 
-- `MAPPING_STARTED`, `MAPPING_STOPPED` y `DISPLAY_UPDATE`;
-- display ID estable `lclient_recon`;
-- waypoint no persistente reconstruible;
-- no conserva objetos `Waypoint` entre sesiones;
-- diagnósticos de estado reales;
-- bridge reflejado cacheado;
-- JourneyMap sigue siendo `compileOnly`/no obligatorio.
+- `compileOnly`;
+- display `lclient_recon`;
+- waypoint transitorio;
+- lifecycle `MAPPING_STARTED`, `MAPPING_STOPPED`, `DISPLAY_UPDATE`;
+- no conserva objetos `Waypoint` de sesiones anteriores;
+- Recon puede funcionar sin JourneyMap instalado.
 
 ## Configuración resistente a fallos
 
-`lclient.json` y `copyl-messages.json` usan archivo temporal + reemplazo atómico cuando el sistema lo permite.
+`lclient.json` y `copyl-messages.json` usan escritura temporal + reemplazo atómico cuando el sistema lo permite.
 
-Si un JSON está corrupto:
+Si un JSON se corrompe:
 
 1. se mueve a `*.broken-<timestamp>`;
 2. se crea una configuración válida;
-3. Lclient no vuelve a leer el mismo archivo roto en cada inicio.
+3. Lclient no vuelve a intentar leer el mismo archivo roto en cada inicio.
 
-Configs legibles pero antiguas/incorrectas se sanea y migran una sola vez: rangos, keycodes, conflictos, IDs y estructuras incompletas.
-
-## Ruleta e interfaces
-
-- Click izquierdo: configurar módulo.
-- Click derecho: activar/desactivar.
-- Ruleta responsive.
-- Ajustes de módulo sin el antiguo mínimo fijo de 180 px.
-- CopyL tiene layout normal, compacto y ultracompacto.
-- Selector de comida ajusta paginación a la altura.
-- Notification History pagina según espacio disponible.
-- Recon oculta el panel lateral si invadiría la retícula.
-- Configuración global adapta alturas, botones y texto a GUI Scale alto.
+También se migran y reparan automáticamente rangos, keycodes, IDs, conflictos, arrays antiguos y ahora posiciones HUD inválidas/solapadas.
 
 ## Compatibilidad
 
@@ -185,7 +174,7 @@ Configs legibles pero antiguas/incorrectas se sanea y migran una sola vez: rango
 - Forge 47.x
 - Java 17
 - JourneyMap 1.20.1-5.10.x para JourneyMap+
-- JourneyMap es opcional
+- JourneyMap opcional
 
 ## Build y publicación
 
@@ -197,10 +186,11 @@ GitHub Actions:
 
 - compila con Java 17;
 - selecciona exactamente `lclient-<version>.jar`;
-- valida que el JAR se abra y contenga `META-INF/mods.toml` y la clase principal;
-- calcula SHA-256 del mismo archivo;
-- cancela builds anteriores de la misma rama cuando aparece uno nuevo;
-- evita que un build viejo de `main` sobrescriba uno más reciente;
+- valida que el JAR se pueda abrir;
+- comprueba `META-INF/mods.toml` y la clase principal;
+- calcula SHA-256;
+- cancela builds obsoletos de la misma rama;
+- evita que un build viejo de `main` publique encima de uno nuevo;
 - publica en `build-output` `lclient-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt`.
 
-El PowerShell de despliegue sólo necesita descargar el payload publicado, verificar SHA-256 y copiar el JAR a la instancia; no necesita compilar localmente.
+El despliegue final puede limitarse a descargar ese payload, comprobar SHA-256 y copiar el JAR a la instancia; no requiere compilar localmente.
