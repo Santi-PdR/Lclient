@@ -2,6 +2,61 @@
 
 Todos los cambios importantes de Lclient se documentan aquí.
 
+## 2.8.0 — Tactical Suite
+
+### Advanced Recon
+
+- Añade memoria visual de objetivo durante ~650 ms para evitar que el Target Panel parpadee por mínimos movimientos de mira.
+- La memoria se limpia al soltar zoom, cambiar de mundo, desconectarse o desaparecer la entidad.
+- Los waypoints siguen usando siempre un raycast fresco y nunca el objetivo recordado.
+- Nueva telemetría opcional de entidades ya cargadas: velocidad, cierre relativo, movimiento lateral, tendencia acercándose/alejándose, distancia horizontal, `ΔY`, rumbo cardinal y ángulo respecto a la mira.
+- Target Panel movible entre cuatro esquinas y altura dinámica según datos disponibles.
+
+### Loot ESP
+
+- La lista HUD añade rumbo cardinal y diferencia vertical del drop más cercano de cada grupo.
+- Dirección/altura se puede desactivar.
+- El panel puede moverse entre las cuatro esquinas.
+- Continúa reutilizando la caché del renderer; no aparece un segundo escaneo de `ItemEntity`.
+
+### Smart Offhand
+
+- Nueva protección de offhand de combate, activada por defecto.
+- Tótems y escudos no se reemplazan automáticamente por comida.
+- El aviso de objeto protegido se deduplica para no repetirse cada tick.
+- La protección se puede activar/desactivar desde Smart Offhand.
+
+### CopyL
+
+- Añade `{yaw}` y `{pitch}`.
+- Nuevas variables de objetivo: `{targettype}`, `{targethp}`, `{targetmaxhp}`, `{targetspeed}`, `{targetdy}`, `{targetbearing}`, `{targetmotion}` y `{targetitem}`.
+- Las variables tácticas usan Recon cuando está en zoom y `minecraft.hitResult` fuera de Recon.
+- Nueva referencia de variables integrada, paginada y responsive.
+- Abrir/cerrar la ayuda conserva los borradores del editor.
+
+### Notification Center
+
+- El HUD de avisos puede moverse entre las cuatro esquinas.
+- Nueva alerta preventiva cuando quedan 1–2 slots del inventario principal.
+- Conserva aviso separado al llegar a inventario completamente lleno.
+- Las alertas siguen funcionando por transición de estado, evitando spam por tick.
+
+### HUD y navegación
+
+- Nuevo editor `Distribución y telemetría HUD` con previsualización.
+- Avisos, Loot HUD y Recon Panel tienen posiciones persistentes independientes.
+- La configuración evita/repara esquinas duplicadas para que los tres paneles no se solapen.
+- Layout por defecto: Loot arriba izquierda, Recon arriba derecha, Avisos abajo derecha.
+- El centro de la ruleta abre Config global/HUD.
+- La ruleta muestra estado táctico resumido: HUD, `SAFE`, telemetría, teclas y alcance.
+
+### Compatibilidad y release
+
+- Sigue siendo 100% client-side.
+- Minecraft 1.20.1, Forge 47.x, Java 17.
+- JourneyMap sigue siendo opcional/`compileOnly`.
+- Sin nuevas dependencias obligatorias ni cambios de networking.
+
 ## 2.7.0 — Información táctica y UX
 
 ### Notification Center
