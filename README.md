@@ -1,196 +1,136 @@
-# Lclient
+# CopyL
 
-Lclient es un cliente modular **100% client-side** para Minecraft Forge 1.20.1.
+CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## Módulos
+## CopyL 3.0.0
 
-La ruleta central administra cinco módulos:
+A partir de 3.0 el proyecto deja de ser un cliente modular. Se eliminaron completamente del código y del JAR:
 
-- CopyL
 - Loot ESP
 - Smart Offhand
 - Advanced Recon
+- HUD táctico
+- Notification Center
 - JourneyMap+
+- ruleta de módulos
+- editor de HUD
+- cualquier dependencia de JourneyMap
 
-La tecla global de la ruleta no aparece en `Opciones > Controles`: se cambia desde `Mods > Lclient > Config`. Las teclas internas y opciones de módulo viven dentro de la propia ruleta.
+No están ocultos ni desactivados: sus clases, pantallas, configuración y dependencias fueron borradas.
 
-## Lclient 2.8.0
+## Función principal
 
-2.8 profundiza la capa táctica de 2.7 sin reintroducir módulos descartados ni duplicar funciones de otros mods del pack.
-
-### Advanced Recon
-
-Recon mantiene zoom render-only, rueda de magnificación, raycast largo configurable y waypoint opcional de JourneyMap.
-
-Novedades de 2.8:
-
-- **TRACK estable**: conserva el último objetivo de entidad durante ~650 ms para que el Target Panel no desaparezca por un pequeño movimiento de mira;
-- el TRACK se invalida al dejar de hacer zoom, cambiar de mundo, desconectarse o desaparecer la entidad;
-- crear waypoint sigue obligando a un **raycast fresco**: la memoria visual nunca se usa para marcar una posición vieja;
-- telemetría opcional basada únicamente en entidades ya cargadas por el cliente:
-  - velocidad del objetivo en m/s;
-  - velocidad de cierre/apertura relativa;
-  - movimiento lateral izquierda/derecha;
-  - acercándose/alejándose/estable;
-  - distancia horizontal;
-  - diferencia vertical `ΔY`;
-  - rumbo cardinal;
-  - ángulo del objetivo respecto a la mira;
-- Target Panel movible entre las cuatro esquinas;
-- panel dinámico: sólo reserva filas para datos realmente disponibles;
-- mantiene nombre, tipo, distancia, coordenadas, HP, item visible y cantidad de piezas de armadura.
-
-Los hooks defectuosos de entidades/items modded siguen aislados con fallbacks.
-
-### Loot ESP
-
-Loot ESP continúa usando sólo `ItemEntity` ya presentes en el `ClientLevel`.
-
-- cajas `NO_DEPTH_TEST` a través de terreno;
-- beacon vertical opcional;
-- alcance, stack mínimo y tecla configurables;
-- escaneo corto cacheado;
-- prioridad para los drops más cercanos en acumulaciones grandes;
-- limpieza de caché al desactivar/cambiar de sesión.
-
-El HUD de loot ahora puede mostrar por grupo:
+CopyL ofrece **10 slots** independientes. Cada slot tiene:
 
 - nombre;
-- cantidad acumulada;
-- distancia del drop más cercano;
-- rumbo cardinal;
-- diferencia vertical `ΔY`.
+- mensaje o comando;
+- tecla propia.
 
-El HUD reutiliza la misma caché de Loot ESP: **no ejecuta un segundo escaneo de entidades**. Puede moverse entre las cuatro esquinas y la dirección/altura se puede desactivar.
+Si el texto empieza con `/`, CopyL lo envía como comando. En cualquier otro caso lo envía como mensaje de chat.
 
-### Smart Offhand
+Las teclas de CopyL se leen directamente con GLFW y **no aparecen en `Opciones > Controles`**.
 
-Mantiene selección `AUTO` o comida exacta, fallback opcional y restauración transaccional segura.
+## Abrir el editor
 
-2.8 añade protección de combate activada por defecto:
+La tecla de apertura por defecto es `Alt derecho`.
 
-- si la offhand contiene un **tótem** o un **escudo**, Smart Offhand no lo reemplaza automáticamente por comida;
-- emite un único aviso al detectar el objeto protegido, sin repetir cada tick;
-- la protección se puede desactivar desde los ajustes de Smart Offhand;
-- restaurar sigue exigiendo que item, tags y cantidad del slot original coincidan.
+Se puede cambiar desde:
 
-### CopyL
+`Mods > CopyL > Config`
 
-Sigue ofreciendo 10 slots con nombre, tecla única, guardado transaccional y layouts normal/compacto/ultracompacto.
+La pantalla de configuración sólo contiene:
 
-Variables del jugador:
+- tecla para abrir CopyL;
+- botón para abrir el editor de mensajes.
 
-- `{pos}`, `{x}`, `{y}`, `{z}`
-- `{dim}`
-- `{hp}`
-- `{food}`
-- `{name}`
-- `{yaw}`
-- `{pitch}`
+Si venías de Lclient 2.x, CopyL intenta conservar la antigua tecla de la ruleta como nueva tecla de apertura. Después migra `config/lclient.json` a `config/copyl.json` y elimina el archivo viejo.
 
-Variables del objetivo:
+## Editor
 
-- `{target}`
-- `{targettype}`
-- `{targetdist}`
-- `{targetpos}`, `{targetx}`, `{targety}`, `{targetz}`
-- `{targethp}`, `{targetmaxhp}`
-- `{targetspeed}`
-- `{targetdy}`
-- `{targetbearing}`
-- `{targetmotion}`
-- `{targetitem}`
+El editor mantiene:
 
-Con Recon activo usa el raycast largo; fuera de Recon usa `minecraft.hitResult`. No obtiene entidades o bloques que el cliente no conozca.
+- guardado transaccional;
+- Cancelar sin aplicar cambios;
+- `Ctrl+Enter` para guardar;
+- nombres de hasta 24 caracteres;
+- mensajes de hasta 256 caracteres;
+- prevención de teclas duplicadas;
+- prevención de conflicto con la tecla global de apertura;
+- layouts adaptativos para ventanas pequeñas y GUI Scale alto;
+- paginación automática;
+- ayuda de variables integrada.
 
-El editor incorpora una **referencia de variables dentro del juego**, paginada y responsive. Entrar y salir de la ayuda conserva los borradores sin guardar.
+La configuración de mensajes se guarda en:
 
-### Notification Center
+`config/copyl-messages.json`
 
-Mantiene tarjetas no-chat, severidad, deduplicación, fade, duración configurable, historial temporal y alertas críticas.
+## Variables
 
-2.8 mejora las alertas de inventario:
+### Jugador
 
-- avisa al quedar **2 o 1 slots libres**;
-- escala a `Inventario lleno` al llegar a 0;
-- sólo avisa al entrar en cada estado, no cada tick.
+- `{pos}` — coordenadas completas
+- `{x}` `{y}` `{z}` — coordenadas separadas
+- `{dim}` — dimensión
+- `{hp}` — vida
+- `{food}` — hambre
+- `{name}` — nombre
+- `{yaw}` — giro horizontal de cámara
+- `{pitch}` — giro vertical de cámara
 
-Continúan las alertas para vida ≤25% y durabilidad crítica de item/armadura.
+### Objetivo actual
 
-### Editor de HUD
+Estas variables usan **únicamente `minecraft.hitResult`**, es decir, el objetivo que ya está bajo la mira vanilla del cliente.
 
-`Mods > Lclient > Config > Distribución y telemetría HUD` permite:
+- `{target}` — nombre del objetivo
+- `{targettype}` — tipo/registry ID
+- `{targetdist}` — distancia
+- `{targetpos}` — coordenadas completas
+- `{targetx}` `{targety}` `{targetz}` — coordenadas separadas
+- `{targethp}` `{targetmaxhp}` — vida actual/máxima conocida
+- `{targetspeed}` — velocidad aproximada en m/s
+- `{targetdy}` — diferencia de altura respecto al jugador
+- `{targetbearing}` — rumbo cardinal
+- `{targetmotion}` — izquierda/derecha/acercándose/alejándose/estable
+- `{targetitem}` — item visible en mano u offhand
 
-- mover Avisos;
-- mover Loot HUD;
-- mover Recon Panel;
-- activar/desactivar dirección/altura de loot;
-- activar/desactivar telemetría Recon;
-- restaurar el layout por defecto;
-- ver una previsualización de las posiciones.
-
-Los tres paneles no pueden terminar guardados en la misma esquina: la configuración repara automáticamente colisiones y deja una cuarta esquina libre.
-
-Layout por defecto:
-
-- Loot: arriba izquierda;
-- Recon: arriba derecha;
-- Avisos: abajo derecha.
-
-### Ruleta como hub
-
-- click izquierdo sobre módulo: configurar;
-- click derecho: activar/desactivar;
-- el centro de la ruleta abre **Configuración global + HUD**;
-- el centro muestra si los avisos globales están activos;
-- cada módulo resume su estado: HUD de Loot, protección `SAFE` de Smart Offhand, telemetría Recon, teclas y alcance.
-
-### JourneyMap+
-
-JourneyMap sigue siendo completamente opcional:
-
-- `compileOnly`;
-- display `lclient_recon`;
-- waypoint transitorio;
-- lifecycle `MAPPING_STARTED`, `MAPPING_STOPPED`, `DISPLAY_UPDATE`;
-- no conserva objetos `Waypoint` de sesiones anteriores;
-- Recon puede funcionar sin JourneyMap instalado.
+Para bloques, las variables que sólo aplican a entidades devuelven `-`.
 
 ## Configuración resistente a fallos
 
-`lclient.json` y `copyl-messages.json` usan escritura temporal + reemplazo atómico cuando el sistema lo permite.
+`copyl.json` y `copyl-messages.json` usan escritura temporal y reemplazo atómico cuando el sistema lo permite.
 
-Si un JSON se corrompe:
+Si un JSON está corrupto:
 
 1. se mueve a `*.broken-<timestamp>`;
-2. se crea una configuración válida;
-3. Lclient no vuelve a intentar leer el mismo archivo roto en cada inicio.
+2. se genera una configuración válida;
+3. CopyL puede volver a iniciar sin releer indefinidamente el archivo roto.
 
-También se migran y reparan automáticamente rangos, keycodes, IDs, conflictos, arrays antiguos y ahora posiciones HUD inválidas/solapadas.
+`copyl-messages.json` también repara automáticamente arrays antiguos, teclas inválidas, duplicados y conflictos con la tecla global.
 
 ## Compatibilidad
 
 - Minecraft 1.20.1
 - Forge 47.x
 - Java 17
-- JourneyMap 1.20.1-5.10.x para JourneyMap+
-- JourneyMap opcional
+- sin dependencia de JourneyMap
+- sin componente server-side
 
-## Build y publicación
+## Build
 
 ```bash
 ./gradlew build
 ```
 
+El JAR final es:
+
+`build/libs/copyl-3.0.0.jar`
+
 GitHub Actions:
 
 - compila con Java 17;
-- selecciona exactamente `lclient-<version>.jar`;
-- valida que el JAR se pueda abrir;
-- comprueba `META-INF/mods.toml` y la clase principal;
+- valida que el JAR se abra;
+- verifica `META-INF/mods.toml` y `CopyL.class`;
 - calcula SHA-256;
-- cancela builds obsoletos de la misma rama;
-- evita que un build viejo de `main` publique encima de uno nuevo;
-- publica en `build-output` `lclient-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt`.
-
-El despliegue final puede limitarse a descargar ese payload, comprobar SHA-256 y copiar el JAR a la instancia; no requiere compilar localmente.
+- publica el artifact `CopyL-<version>`;
+- en `main`, publica `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`;
+- elimina el antiguo payload `lclient-latest.jar.b64` al publicar CopyL 3.x.
