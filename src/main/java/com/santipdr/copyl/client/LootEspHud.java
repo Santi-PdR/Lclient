@@ -57,11 +57,12 @@ public final class LootEspHud {
         Minecraft minecraft = Minecraft.getInstance();
         LClientConfig config = LClientConfig.get();
         if (!config.lootEsp
+                || !config.lootEspHud
                 || minecraft.player == null
                 || minecraft.level == null
                 || minecraft.options.hideGui
                 || minecraft.screen != null) {
-            if (!config.lootEsp) clear();
+            if (!config.lootEsp || !config.lootEspHud || minecraft.level == null) clear();
             return;
         }
 
@@ -85,7 +86,7 @@ public final class LootEspHud {
         for (Row row : rows) {
             String text = row.name + " x" + row.count + "  ·  " + row.distance + "m";
             graphics.drawString(minecraft.font,
-                    minecraft.font.plainSubstrByWidth(text, panelW - 14),
+                    minecraft.font.plainSubstrByWidth(text, Math.max(20, panelW - 14)),
                     left + 8,
                     y,
                     0xFFAABAC7,
