@@ -28,6 +28,8 @@ public final class LClientConfig {
     public int lootEspMinStack = 1;
     /** Adds a taller no-depth marker so loot remains obvious behind thick terrain. */
     public boolean lootEspBeacon = true;
+    /** Compact top-left summary of nearest grouped drops. */
+    public boolean lootEspHud = true;
 
     public boolean smartOffhand = true;
     public int foodThreshold = 14;
