@@ -33,7 +33,7 @@ public final class LClientSettingsScreen extends Screen {
         boolean compact = height < 270;
         boolean tight = height < 220;
         int buttonWidth = Math.min(250, Math.max(120, width - 24));
-        int top = tight ? 38 : compact ? 48 : height / 2 - 78;
+        int top = tight ? 34 : compact ? 44 : height / 2 - 91;
         int buttonHeight = tight ? 16 : compact ? 18 : 20;
         int step = tight ? 18 : compact ? 22 : 27;
         int left = cx - buttonWidth / 2;
@@ -73,14 +73,19 @@ public final class LClientSettingsScreen extends Screen {
             refreshLabels();
         }).bounds(left, top + step * 4, buttonWidth, buttonHeight).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Historial de avisos"), b -> {
-                    if (minecraft != null) minecraft.setScreen(new NotificationHistoryScreen(this));
+        addRenderableWidget(Button.builder(Component.literal("Distribución y telemetría HUD"), b -> {
+                    if (minecraft != null) minecraft.setScreen(new HudLayoutScreen(this));
                 })
                 .bounds(left, top + step * 5, buttonWidth, buttonHeight).build());
 
+        addRenderableWidget(Button.builder(Component.literal("Historial de avisos"), b -> {
+                    if (minecraft != null) minecraft.setScreen(new NotificationHistoryScreen(this));
+                })
+                .bounds(left, top + step * 6, buttonWidth, buttonHeight).build());
+
         int gap = 8;
         int half = Math.max(54, (buttonWidth - gap) / 2);
-        int actionsY = top + step * 6 + (tight ? 1 : compact ? 2 : 4);
+        int actionsY = top + step * 7 + (tight ? 1 : compact ? 2 : 4);
         addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> {
                     if (minecraft != null) minecraft.setScreen(new LClientWheelScreen(this));
                 })
@@ -182,7 +187,7 @@ public final class LClientSettingsScreen extends Screen {
         boolean tight = height < 220;
         int panelW = Math.min(460, Math.max(120, width - 20));
         int panelTop = tight ? 4 : compact ? 6 : 14;
-        int panelBottom = tight ? 34 : compact ? 42 : 90;
+        int panelBottom = tight ? 31 : compact ? 39 : 90;
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelBottom, 0xB00D131A);
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelTop + 2, 0xFF6FC2FF);
 
@@ -191,23 +196,23 @@ public final class LClientSettingsScreen extends Screen {
         if (!tight) {
             if (compact) {
                 graphics.drawCenteredString(font,
-                        font.plainSubstrByWidth("Entrada global + avisos; los módulos siguen dentro de la ruleta.", maxTextWidth),
+                        font.plainSubstrByWidth("Entrada global, avisos y layout HUD; módulos dentro de la ruleta.", maxTextWidth),
                         cx,
                         panelTop + 24,
                         0xFF9FB1C0);
             } else {
                 graphics.drawCenteredString(font,
-                        "La configuración global controla la entrada a Lclient y su HUD de avisos.",
+                        "La configuración global controla entrada, avisos y distribución de HUD.",
                         cx,
                         panelTop + 29,
                         0xFFB1C0CD);
                 graphics.drawCenteredString(font,
-                        font.plainSubstrByWidth("Las alertas críticas cubren vida, inventario y durabilidad sin escribir al chat.", maxTextWidth),
+                        font.plainSubstrByWidth("El editor HUD mueve Avisos, Loot y Recon y permite activar telemetría táctica.", maxTextWidth),
                         cx,
                         panelTop + 45,
                         0xFF8799AA);
                 graphics.drawCenteredString(font,
-                        font.plainSubstrByWidth("El historial vive sólo durante la sesión y no genera escrituras extra de disco.", maxTextWidth),
+                        font.plainSubstrByWidth("El historial sigue viviendo sólo durante la sesión y no añade escrituras extra.", maxTextWidth),
                         cx,
                         panelTop + 61,
                         0xFF718596);
