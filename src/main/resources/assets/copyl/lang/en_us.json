@@ -1,24 +1,10 @@
 {
   "key.categories.copyl": "CopyL — Quick messages",
-  "key.copyl.open_editor": "Open CopyL message editor",
-  "key.copyl.slot.1": "Send quick message 1",
-  "key.copyl.slot.2": "Send quick message 2",
-  "key.copyl.slot.3": "Send quick message 3",
-  "key.copyl.slot.4": "Send quick message 4",
-  "key.copyl.slot.5": "Send quick message 5",
-  "key.copyl.slot.6": "Send quick message 6",
-  "key.copyl.slot.7": "Send quick message 7",
-  "key.copyl.slot.8": "Send quick message 8",
-  "key.copyl.slot.9": "Send quick message 9",
-  "key.copyl.slot.10": "Send quick message 10",
   "screen.copyl.title": "CopyL — Quick messages",
   "screen.copyl.subtitle": "Save up to 10 messages or commands and send them instantly with a key.",
-  "screen.copyl.controls_hint": "Click each slot key to change it here. Backspace/Delete leaves it unassigned.",
-  "screen.copyl.slot": "Message %s",
   "screen.copyl.placeholder": "Write a message or /command...",
-  "screen.copyl.save": "Save and close",
-  "screen.copyl.controls": "Advanced controls",
-  "screen.copyl.key.waiting": "PRESS KEY",
-  "screen.copyl.key.capture": "Editing message %s key — press a key, Esc cancels",
-  "screen.copyl.key.tooltip": "Click to change this key. Mouse buttons are supported too."
+  "screen.copyl.save": "Save changes",
+  "screen.copyl.cancel": "Cancel",
+  "screen.copyl.variables": "Variables",
+  "screen.copyl.key.waiting": "PRESS KEY"
 }
