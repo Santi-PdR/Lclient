@@ -7,10 +7,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -21,6 +25,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 @Mod.EventBusSubscriber(modid = CopyL.MOD_ID, value = Dist.CLIENT)
 public final class CopyLClientEvents {
@@ -37,6 +42,7 @@ public final class CopyLClientEvents {
     private static boolean smartOffhandActive;
     private static ItemStack smartOriginalOffhand = ItemStack.EMPTY;
     private static ItemStack smartInsertedFood = ItemStack.EMPTY;
+    private static String protectedOffhandKey = "";
 
     static {
         Arrays.fill(observedMessageKeys, Integer.MIN_VALUE);
@@ -175,12 +181,22 @@ public final class CopyLClientEvents {
                 .replace("{hp}", Integer.toString(Math.round(player.getHealth())))
                 .replace("{food}", Integer.toString(player.getFoodData().getFoodLevel()))
                 .replace("{name}", player.getGameProfile().getName())
+                .replace("{yaw}", Integer.toString(Math.round(player.getYRot())))
+                .replace("{pitch}", Integer.toString(Math.round(player.getXRot())))
                 .replace("{target}", target.label)
+                .replace("{targettype}", target.type)
                 .replace("{targetdist}", Integer.toString(target.distance))
                 .replace("{targetpos}", target.position == null ? "none" : target.position.toShortString())
                 .replace("{targetx}", target.position == null ? "-" : Integer.toString(target.position.getX()))
                 .replace("{targety}", target.position == null ? "-" : Integer.toString(target.position.getY()))
-                .replace("{targetz}", target.position == null ? "-" : Integer.toString(target.position.getZ()));
+                .replace("{targetz}", target.position == null ? "-" : Integer.toString(target.position.getZ()))
+                .replace("{targethp}", Integer.toString(target.health))
+                .replace("{targetmaxhp}", Integer.toString(target.maxHealth))
+                .replace("{targetspeed}", oneDecimal(target.speed))
+                .replace("{targetdy}", Integer.toString(target.deltaY))
+                .replace("{targetbearing}", target.bearing)
+                .replace("{targetmotion}", target.motion)
+                .replace("{targetitem}", target.item);
     }
 
     private static TargetContext resolveTargetContext(Minecraft minecraft) {
@@ -193,9 +209,45 @@ public final class CopyLClientEvents {
 
         try {
             if (hit instanceof EntityHitResult entityHit) {
-                BlockPos pos = entityHit.getEntity().blockPosition();
-                int distance = Math.max(0, (int) Math.round(minecraft.player.distanceTo(entityHit.getEntity())));
-                return new TargetContext(ReconController.safeEntityLabel(entityHit.getEntity()), pos, distance);
+                Entity entity = entityHit.getEntity();
+                BlockPos pos = entity.blockPosition();
+                int distance = Math.max(0, (int) Math.round(minecraft.player.distanceTo(entity)));
+                String type = safeEntityType(entity);
+                int health = -1;
+                int maxHealth = -1;
+                String item = "none";
+                if (entity instanceof LivingEntity living) {
+                    try {
+                        health = Math.round(living.getHealth());
+                        maxHealth = Math.round(living.getMaxHealth());
+                    } catch (RuntimeException | LinkageError ignored) {
+                        health = -1;
+                        maxHealth = -1;
+                    }
+                    ItemStack main = safeMainHand(living);
+                    ItemStack off = safeOffhand(living);
+                    if (!main.isEmpty()) item = safeStackLabel(main);
+                    else if (!off.isEmpty()) item = safeStackLabel(off);
+                }
+
+                ReconTelemetry.Snapshot telemetry = ReconTelemetry.snapshot(minecraft, entity);
+                double speed = telemetry == null ? 0.0D : telemetry.speedMetersPerSecond();
+                int deltaY = telemetry == null ? pos.getY() - minecraft.player.blockPosition().getY() : telemetry.deltaY();
+                String bearing = telemetry == null ? "none" : telemetry.cardinal();
+                String motion = telemetry == null ? "none" : telemetry.motion();
+                return new TargetContext(
+                        ReconController.safeEntityLabel(entity),
+                        type,
+                        pos,
+                        distance,
+                        health,
+                        maxHealth,
+                        speed,
+                        deltaY,
+                        bearing,
+                        motion,
+                        item
+                );
             }
             if (hit instanceof BlockHitResult blockHit) {
                 BlockPos pos = blockHit.getBlockPos();
@@ -204,15 +256,59 @@ public final class CopyLClientEvents {
                 int distance = Math.max(0, (int) Math.round(
                         minecraft.player.getEyePosition(1.0F).distanceTo(hit.getLocation())
                 ));
-                return new TargetContext(label, pos, distance);
+                int deltaY = pos.getY() - minecraft.player.blockPosition().getY();
+                return new TargetContext(label, label, pos, distance, -1, -1, 0.0D, deltaY, "none", "none", "none");
             }
         } catch (RuntimeException | LinkageError ignored) {
         }
         return TargetContext.NONE;
     }
 
-    private record TargetContext(String label, BlockPos position, int distance) {
-        private static final TargetContext NONE = new TargetContext("none", null, -1);
+    private record TargetContext(
+            String label,
+            String type,
+            BlockPos position,
+            int distance,
+            int health,
+            int maxHealth,
+            double speed,
+            int deltaY,
+            String bearing,
+            String motion,
+            String item
+    ) {
+        private static final TargetContext NONE = new TargetContext(
+                "none", "none", null, -1, -1, -1, 0.0D, 0, "none", "none", "none"
+        );
+    }
+
+    private static String safeEntityType(Entity entity) {
+        try {
+            var id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            return id == null ? "entity" : id.toString();
+        } catch (RuntimeException | LinkageError ignored) {
+            return "entity";
+        }
+    }
+
+    private static ItemStack safeMainHand(LivingEntity living) {
+        try {
+            return living.getMainHandItem();
+        } catch (RuntimeException | LinkageError ignored) {
+            return ItemStack.EMPTY;
+        }
+    }
+
+    private static ItemStack safeOffhand(LivingEntity living) {
+        try {
+            return living.getOffhandItem();
+        } catch (RuntimeException | LinkageError ignored) {
+            return ItemStack.EMPTY;
+        }
+    }
+
+    private static String oneDecimal(double value) {
+        return String.format(Locale.ROOT, "%.1f", Double.isFinite(value) ? value : 0.0D);
     }
 
     private static String truncateUtf16Safely(String value, int maxChars) {
@@ -246,16 +342,30 @@ public final class CopyLClientEvents {
 
         int foodLevel = player.getFoodData().getFoodLevel();
         if (!smartOffhandActive) {
-            if (foodLevel > config.foodThreshold
-                    || isUsableFoodStack(player.getOffhandItem(), player)
-                    || player.isUsingItem()) {
+            if (foodLevel > config.foodThreshold || isUsableFoodStack(player.getOffhandItem(), player)) {
+                protectedOffhandKey = "";
                 return;
             }
+            if (player.isUsingItem()) return;
+
+            ItemStack original = player.getOffhandItem().copy();
+            if (config.smartOffhandProtectCombatItems && isProtectedCombatOffhand(original)) {
+                String key = protectedStackKey(original);
+                if (!key.equals(protectedOffhandKey)) {
+                    LClientNotifications.info(
+                            "offhand-protected",
+                            "Smart Offhand",
+                            "Protegido: " + safeStackLabel(original)
+                    );
+                }
+                protectedOffhandKey = key;
+                return;
+            }
+            protectedOffhandKey = "";
 
             int source = findFoodSlot(player, config);
             if (source < 0) return;
 
-            ItemStack original = player.getOffhandItem().copy();
             swapInventoryWithOffhand(minecraft, source);
             ItemStack inserted = player.getOffhandItem().copy();
             ItemStack sourceAfterSwap = player.getInventory().getItem(source);
@@ -443,6 +553,24 @@ public final class CopyLClientEvents {
         return penalty;
     }
 
+    private static boolean isProtectedCombatOffhand(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        try {
+            return stack.is(Items.TOTEM_OF_UNDYING) || stack.getItem() instanceof ShieldItem;
+        } catch (RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    private static String protectedStackKey(ItemStack stack) {
+        try {
+            var id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            return id == null ? safeStackLabel(stack) : id.toString();
+        } catch (RuntimeException | LinkageError ignored) {
+            return safeStackLabel(stack);
+        }
+    }
+
     private static String safeStackLabel(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "vacío";
         try {
@@ -475,6 +603,7 @@ public final class CopyLClientEvents {
         smartOffhandActive = false;
         smartOriginalOffhand = ItemStack.EMPTY;
         smartInsertedFood = ItemStack.EMPTY;
+        protectedOffhandKey = "";
     }
 
     private static void resetTransientKeys() {
