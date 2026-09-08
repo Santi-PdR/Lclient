@@ -41,8 +41,15 @@ public final class LClientHud {
 
         int screenW = minecraft.getWindow().getGuiScaledWidth();
         int screenH = minecraft.getWindow().getGuiScaledHeight();
-        if (screenW >= 520 && screenH >= 150 && hit instanceof EntityHitResult entityHit) {
-            renderTargetPanel(graphics, minecraft, entityHit.getEntity());
+        Entity tracked = ReconController.getTrackedEntity(minecraft);
+        if (screenW >= 360 && screenH >= 150 && tracked != null) {
+            renderTargetPanel(
+                    graphics,
+                    minecraft,
+                    tracked,
+                    config,
+                    ReconController.isTrackedFromMemory(hit, tracked)
+            );
         }
     }
 
@@ -135,55 +142,76 @@ public final class LClientHud {
         return "";
     }
 
-    private static void renderTargetPanel(GuiGraphics graphics, Minecraft minecraft, Entity entity) {
+    private static void renderTargetPanel(
+            GuiGraphics graphics,
+            Minecraft minecraft,
+            Entity entity,
+            LClientConfig config,
+            boolean memoryTrack
+    ) {
         int screenW = minecraft.getWindow().getGuiScaledWidth();
-        int panelW = Math.min(246, Math.max(184, screenW / 5));
-        panelW = Math.min(panelW, screenW - 16);
-        int x = Math.max(8, screenW - panelW - 8);
-        int y = 10;
+        int screenH = minecraft.getWindow().getGuiScaledHeight();
+        int panelW = Math.min(276, Math.max(184, screenW / 4));
+        panelW = Math.min(panelW, Math.max(120, screenW - 16));
 
-        String title = ReconController.safeEntityLabel(entity);
-        String type = safeEntityType(entity);
-        String distance = Math.round(minecraft.player.distanceTo(entity)) + " m";
         LivingEntity living = entity instanceof LivingEntity l ? l : null;
         float health = living == null ? Float.NaN : safeHealth(living);
         float maxHealth = living == null ? Float.NaN : safeMaxHealth(living);
         boolean validHealth = Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0.0F;
-        String hp = validHealth ? Math.round(health) + " / " + Math.round(maxHealth) + " HP" : null;
         String equipment = living == null ? "" : safeEquipmentSummary(living);
+        ReconTelemetry.Snapshot telemetry = config.reconTelemetry ? ReconTelemetry.snapshot(minecraft, entity) : null;
 
-        int equipmentOffset = 46;
-        int hpOffset = equipment.isBlank() ? 46 : 59;
-        int barOffset = hpOffset + 13;
-        int height;
-        if (validHealth) height = barOffset + 8;
-        else if (!equipment.isBlank()) height = equipmentOffset + 16;
-        else height = 48;
+        int contentY = 46;
+        if (!equipment.isBlank()) contentY += 13;
+        if (telemetry != null) contentY += 26;
+        int panelH = validHealth ? contentY + 21 : contentY + 5;
 
-        graphics.fill(x, y, x + panelW, y + height, 0xC00C1118);
-        graphics.fill(x, y, x + 2, y + height, 0xFF72C5FF);
-        graphics.fill(x + 2, y, x + panelW, y + 1, 0x6072C5FF);
+        HudAnchor anchor = HudAnchor.fromConfig(config.reconHudAnchor, HudAnchor.TOP_RIGHT);
+        int x = anchor.left(screenW, panelW, 8);
+        int y = anchor.top(screenH, panelH, 8);
 
+        graphics.fill(x, y, x + panelW, y + panelH, 0xC00C1118);
+        graphics.fill(x, y, x + 2, y + panelH, memoryTrack ? 0xFFFFB86B : 0xFF72C5FF);
+        graphics.fill(x + 2, y, x + panelW, y + 1, memoryTrack ? 0x60FFB86B : 0x6072C5FF);
+
+        String title = ReconController.safeEntityLabel(entity) + (memoryTrack ? "  ·  TRACK" : "");
         graphics.drawString(minecraft.font,
                 minecraft.font.plainSubstrByWidth(title, panelW - 14),
-                x + 8, y + 7, 0xFFF1F7FC, false);
+                x + 8, y + 7, memoryTrack ? 0xFFFFD59A : 0xFFF1F7FC, false);
         graphics.drawString(minecraft.font,
-                minecraft.font.plainSubstrByWidth(type, panelW - 14),
+                minecraft.font.plainSubstrByWidth(safeEntityType(entity), panelW - 14),
                 x + 8, y + 20, 0xFF8EA0B1, false);
         graphics.drawString(minecraft.font,
-                minecraft.font.plainSubstrByWidth(distance + "  ·  " + entity.blockPosition().toShortString(), panelW - 14),
+                minecraft.font.plainSubstrByWidth(
+                        Math.round(minecraft.player.distanceTo(entity)) + " m  ·  " + entity.blockPosition().toShortString(),
+                        panelW - 14
+                ),
                 x + 8, y + 33, 0xFFB8C8D7, false);
 
+        int rowY = y + 46;
         if (!equipment.isBlank()) {
             graphics.drawString(minecraft.font,
                     minecraft.font.plainSubstrByWidth(equipment, panelW - 14),
-                    x + 8, y + equipmentOffset, 0xFFD4C9A8, false);
+                    x + 8, rowY, 0xFFD4C9A8, false);
+            rowY += 13;
+        }
+
+        if (telemetry != null) {
+            graphics.drawString(minecraft.font,
+                    minecraft.font.plainSubstrByWidth(telemetry.speedLine(), panelW - 14),
+                    x + 8, rowY, 0xFFA9D8F5, false);
+            rowY += 13;
+            graphics.drawString(minecraft.font,
+                    minecraft.font.plainSubstrByWidth(telemetry.geometryLine(), panelW - 14),
+                    x + 8, rowY, 0xFF8EAFC4, false);
+            rowY += 13;
         }
 
         if (validHealth) {
-            graphics.drawString(minecraft.font, hp, x + 8, y + hpOffset, 0xFFE8B0B0, false);
+            String hp = Math.round(health) + " / " + Math.round(maxHealth) + " HP";
+            graphics.drawString(minecraft.font, hp, x + 8, rowY, 0xFFE8B0B0, false);
             int barX = x + 8;
-            int barY = y + barOffset;
+            int barY = rowY + 13;
             int barW = panelW - 16;
             float healthRatio = Mth.clamp(health / maxHealth, 0.0F, 1.0F);
             graphics.fill(barX, barY, barX + barW, barY + 4, 0x80364141);
