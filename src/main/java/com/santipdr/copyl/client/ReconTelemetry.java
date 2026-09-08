@@ -23,12 +23,26 @@ public final class ReconTelemetry {
             String cardinal,
             String motion
     ) {
-        public String compactLine() {
-            String closing = Math.abs(closingMetersPerSecond) < 0.1D
-                    ? "cierre 0.0"
-                    : String.format(Locale.ROOT, "cierre %+,.1f", closingMetersPerSecond).replace(',', '.');
+        public String speedLine() {
+            return String.format(
+                    Locale.ROOT,
+                    "Vel %.1f m/s · cierre %+.1f · %s",
+                    speedMetersPerSecond,
+                    closingMetersPerSecond,
+                    motion
+            );
+        }
+
+        public String geometryLine() {
             String vertical = deltaY > 0 ? "+" + deltaY : Integer.toString(deltaY);
-            return String.format(Locale.ROOT, "Vel %.1f m/s · %s · ΔY %s · %s", speedMetersPerSecond, closing, vertical, cardinal);
+            return String.format(
+                    Locale.ROOT,
+                    "Horiz %dm · ΔY %s · %s · mira %+.0f°",
+                    horizontalDistance,
+                    vertical,
+                    cardinal,
+                    relativeBearingDegrees
+            );
         }
     }
 
