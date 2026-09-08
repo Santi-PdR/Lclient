@@ -87,6 +87,8 @@ public final class LClientSettingsScreen extends Screen {
                 .bounds(left, actionsY, half, buttonHeight).build());
         addRenderableWidget(Button.builder(Component.literal("Cerrar"), b -> onClose())
                 .bounds(left + half + gap, actionsY, Math.max(1, buttonWidth - half - gap), buttonHeight).build());
+
+        refreshLabels();
     }
 
     private Component keyLabel() {
