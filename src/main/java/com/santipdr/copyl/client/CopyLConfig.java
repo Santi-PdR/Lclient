@@ -48,7 +48,7 @@ public final class CopyLConfig {
 
             config.sanitize();
             AtomicConfigIO.write(PATH, GSON.toJson(config));
-            if (source.equals(LEGACY_PATH)) Files.deleteIfExists(LEGACY_PATH);
+            Files.deleteIfExists(LEGACY_PATH);
             return config;
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(source);
