@@ -17,18 +17,20 @@ public enum HudAnchor {
         return displayName;
     }
 
+    public boolean isTop() {
+        return this == TOP_LEFT || this == TOP_RIGHT;
+    }
+
+    public boolean isLeft() {
+        return this == TOP_LEFT || this == BOTTOM_LEFT;
+    }
+
     public int left(int screenWidth, int panelWidth, int margin) {
-        return switch (this) {
-            case TOP_LEFT, BOTTOM_LEFT -> margin;
-            case TOP_RIGHT, BOTTOM_RIGHT -> Math.max(margin, screenWidth - panelWidth - margin);
-        };
+        return isLeft() ? margin : Math.max(margin, screenWidth - panelWidth - margin);
     }
 
     public int top(int screenHeight, int panelHeight, int margin) {
-        return switch (this) {
-            case TOP_LEFT, TOP_RIGHT -> margin;
-            case BOTTOM_LEFT, BOTTOM_RIGHT -> Math.max(margin, screenHeight - panelHeight - margin);
-        };
+        return isTop() ? margin : Math.max(margin, screenHeight - panelHeight - margin);
     }
 
     public static HudAnchor fromConfig(int value, HudAnchor fallback) {
