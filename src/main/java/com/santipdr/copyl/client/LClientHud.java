@@ -8,6 +8,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -136,7 +137,7 @@ public final class LClientHud {
 
     private static void renderTargetPanel(GuiGraphics graphics, Minecraft minecraft, Entity entity) {
         int screenW = minecraft.getWindow().getGuiScaledWidth();
-        int panelW = Math.min(226, Math.max(174, screenW / 5));
+        int panelW = Math.min(246, Math.max(184, screenW / 5));
         panelW = Math.min(panelW, screenW - 16);
         int x = Math.max(8, screenW - panelW - 8);
         int y = 10;
@@ -149,8 +150,16 @@ public final class LClientHud {
         float maxHealth = living == null ? Float.NaN : safeMaxHealth(living);
         boolean validHealth = Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0.0F;
         String hp = validHealth ? Math.round(health) + " / " + Math.round(maxHealth) + " HP" : null;
+        String equipment = living == null ? "" : safeEquipmentSummary(living);
 
-        int height = validHealth ? 69 : 48;
+        int equipmentOffset = 46;
+        int hpOffset = equipment.isBlank() ? 46 : 59;
+        int barOffset = hpOffset + 13;
+        int height;
+        if (validHealth) height = barOffset + 8;
+        else if (!equipment.isBlank()) height = equipmentOffset + 16;
+        else height = 48;
+
         graphics.fill(x, y, x + panelW, y + height, 0xC00C1118);
         graphics.fill(x, y, x + 2, y + height, 0xFF72C5FF);
         graphics.fill(x + 2, y, x + panelW, y + 1, 0x6072C5FF);
@@ -164,14 +173,53 @@ public final class LClientHud {
         graphics.drawString(minecraft.font,
                 minecraft.font.plainSubstrByWidth(distance + "  ·  " + entity.blockPosition().toShortString(), panelW - 14),
                 x + 8, y + 33, 0xFFB8C8D7, false);
+
+        if (!equipment.isBlank()) {
+            graphics.drawString(minecraft.font,
+                    minecraft.font.plainSubstrByWidth(equipment, panelW - 14),
+                    x + 8, y + equipmentOffset, 0xFFD4C9A8, false);
+        }
+
         if (validHealth) {
-            graphics.drawString(minecraft.font, hp, x + 8, y + 46, 0xFFE8B0B0, false);
+            graphics.drawString(minecraft.font, hp, x + 8, y + hpOffset, 0xFFE8B0B0, false);
             int barX = x + 8;
-            int barY = y + 59;
+            int barY = y + barOffset;
             int barW = panelW - 16;
             float healthRatio = Mth.clamp(health / maxHealth, 0.0F, 1.0F);
             graphics.fill(barX, barY, barX + barW, barY + 4, 0x80364141);
             graphics.fill(barX, barY, barX + Math.round(barW * healthRatio), barY + 4, 0xD8E07B7B);
+        }
+    }
+
+    private static String safeEquipmentSummary(LivingEntity living) {
+        try {
+            ItemStack main = living.getMainHandItem();
+            ItemStack off = living.getOffhandItem();
+            int armorPieces = 0;
+            for (ItemStack armor : living.getArmorSlots()) {
+                if (armor != null && !armor.isEmpty()) armorPieces++;
+            }
+
+            String held = !main.isEmpty() ? safeItemName(main) : !off.isEmpty() ? safeItemName(off) : "Manos vacías";
+            String handPrefix = !main.isEmpty() ? "Mano: " : !off.isEmpty() ? "Offhand: " : "";
+            String armor = armorPieces > 0 ? " · Armadura " + armorPieces + "/4" : "";
+            return handPrefix + held + armor;
+        } catch (RuntimeException | LinkageError ignored) {
+            return "";
+        }
+    }
+
+    private static String safeItemName(ItemStack stack) {
+        try {
+            String name = stack.getHoverName().getString();
+            if (name != null && !name.isBlank()) return name;
+        } catch (RuntimeException | LinkageError ignored) {
+        }
+        try {
+            var id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            return id == null ? "item" : id.getPath();
+        } catch (RuntimeException | LinkageError ignored) {
+            return "item";
         }
     }
 
