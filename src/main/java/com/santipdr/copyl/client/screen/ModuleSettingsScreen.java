@@ -132,6 +132,8 @@ public final class ModuleSettingsScreen extends Screen {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
             case LOOT_ESP -> Component.literal("Lista HUD de loot cercano: " + yesNo(c.lootEspHud));
+            case SMART_OFFHAND -> Component.literal("Proteger escudos/tótems: " + yesNo(c.smartOffhandProtectCombatItems));
+            case RECON -> Component.literal("Telemetría del objetivo: " + yesNo(c.reconTelemetry));
             default -> Component.literal("");
         };
     }
@@ -197,9 +199,13 @@ public final class ModuleSettingsScreen extends Screen {
     }
 
     private void quinaryAction() {
-        if (module != LClientWheelScreen.Module.LOOT_ESP) return;
         LClientConfig c = LClientConfig.get();
-        c.lootEspHud = !c.lootEspHud;
+        switch (module) {
+            case LOOT_ESP -> c.lootEspHud = !c.lootEspHud;
+            case SMART_OFFHAND -> c.smartOffhandProtectCombatItems = !c.smartOffhandProtectCombatItems;
+            case RECON -> c.reconTelemetry = !c.reconTelemetry;
+            default -> { return; }
+        }
         c.save();
         refreshLabels();
     }
@@ -228,7 +234,9 @@ public final class ModuleSettingsScreen extends Screen {
         quaternaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
                 || module == LClientWheelScreen.Module.SMART_OFFHAND
                 || module == LClientWheelScreen.Module.RECON;
-        quinaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP;
+        quinaryButton.visible = module == LClientWheelScreen.Module.LOOT_ESP
+                || module == LClientWheelScreen.Module.SMART_OFFHAND
+                || module == LClientWheelScreen.Module.RECON;
     }
 
     private static int cycle(int current, int... values) {
@@ -368,8 +376,8 @@ public final class ModuleSettingsScreen extends Screen {
         if (!tight) {
             String info = switch (module) {
                 case LOOT_ESP -> "X-ray + lista agrupada; sólo items cargados por el cliente.";
-                case SMART_OFFHAND -> "AUTO usa comida segura; selección exacta respeta tu elección.";
-                case RECON -> "Mantén Zoom; rueda ajusta; waypoint usa el raycast largo.";
+                case SMART_OFFHAND -> "Protege escudos/tótems y restaura sólo si la transacción sigue siendo segura.";
+                case RECON -> "Zoom largo con TRACK estable, telemetría y waypoint de raycast fresco.";
                 case JOURNEYMAP -> JourneyMapBridge.getStatusText();
                 case COPYL -> "Los mensajes rápidos se editan desde el sector CopyL de la ruleta.";
             };
