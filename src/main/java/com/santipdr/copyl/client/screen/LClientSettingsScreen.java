@@ -15,6 +15,7 @@ public final class LClientSettingsScreen extends Screen {
     private final Screen parent;
     private Button keyButton;
     private Button notificationsButton;
+    private Button gameplayAlertsButton;
     private Button durationButton;
     private Button visibleButton;
     private boolean capturing;
@@ -30,10 +31,11 @@ public final class LClientSettingsScreen extends Screen {
     protected void init() {
         int cx = width / 2;
         boolean compact = height < 270;
+        boolean tight = height < 220;
         int buttonWidth = Math.min(250, Math.max(120, width - 24));
-        int top = compact ? 51 : height / 2 - 66;
-        int buttonHeight = compact ? 18 : 20;
-        int step = buttonHeight + (compact ? 4 : 7);
+        int top = tight ? 38 : compact ? 48 : height / 2 - 78;
+        int buttonHeight = tight ? 16 : compact ? 18 : 20;
+        int step = tight ? 18 : compact ? 22 : 27;
         int left = cx - buttonWidth / 2;
 
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
@@ -50,28 +52,35 @@ public final class LClientSettingsScreen extends Screen {
             refreshLabels();
         }).bounds(left, top + step, buttonWidth, buttonHeight).build());
 
+        gameplayAlertsButton = addRenderableWidget(Button.builder(gameplayAlertsLabel(), b -> {
+            LClientConfig config = LClientConfig.get();
+            config.notificationGameplayAlerts = !config.notificationGameplayAlerts;
+            config.save();
+            refreshLabels();
+        }).bounds(left, top + step * 2, buttonWidth, buttonHeight).build());
+
         durationButton = addRenderableWidget(Button.builder(durationLabel(), b -> {
             LClientConfig config = LClientConfig.get();
             config.notificationDurationSeconds = cycle(config.notificationDurationSeconds, 2, 3, 4, 5, 7, 10);
             config.save();
             refreshLabels();
-        }).bounds(left, top + step * 2, buttonWidth, buttonHeight).build());
+        }).bounds(left, top + step * 3, buttonWidth, buttonHeight).build());
 
         visibleButton = addRenderableWidget(Button.builder(visibleLabel(), b -> {
             LClientConfig config = LClientConfig.get();
             config.notificationMaxVisible = cycle(config.notificationMaxVisible, 1, 2, 3, 4, 5);
             config.save();
             refreshLabels();
-        }).bounds(left, top + step * 3, buttonWidth, buttonHeight).build());
+        }).bounds(left, top + step * 4, buttonWidth, buttonHeight).build());
 
         addRenderableWidget(Button.builder(Component.literal("Historial de avisos"), b -> {
                     if (minecraft != null) minecraft.setScreen(new NotificationHistoryScreen(this));
                 })
-                .bounds(left, top + step * 4, buttonWidth, buttonHeight).build());
+                .bounds(left, top + step * 5, buttonWidth, buttonHeight).build());
 
         int gap = 8;
         int half = Math.max(54, (buttonWidth - gap) / 2);
-        int actionsY = top + step * 5 + (compact ? 1 : 3);
+        int actionsY = top + step * 6 + (tight ? 1 : compact ? 2 : 4);
         addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> {
                     if (minecraft != null) minecraft.setScreen(new LClientWheelScreen(this));
                 })
@@ -87,7 +96,11 @@ public final class LClientSettingsScreen extends Screen {
     }
 
     private Component notificationsLabel() {
-        return Component.literal("Centro de notificaciones: " + (LClientConfig.get().notifications ? "ACTIVADO" : "DESACTIVADO"));
+        return Component.literal("Centro de notificaciones: " + yesNo(LClientConfig.get().notifications));
+    }
+
+    private Component gameplayAlertsLabel() {
+        return Component.literal("Alertas críticas de juego: " + yesNo(LClientConfig.get().notificationGameplayAlerts));
     }
 
     private Component durationLabel() {
@@ -101,8 +114,13 @@ public final class LClientSettingsScreen extends Screen {
     private void refreshLabels() {
         if (keyButton != null && !capturing) keyButton.setMessage(keyLabel());
         if (notificationsButton != null) notificationsButton.setMessage(notificationsLabel());
+        if (gameplayAlertsButton != null) gameplayAlertsButton.setMessage(gameplayAlertsLabel());
         if (durationButton != null) durationButton.setMessage(durationLabel());
         if (visibleButton != null) visibleButton.setMessage(visibleLabel());
+        boolean global = LClientConfig.get().notifications;
+        if (gameplayAlertsButton != null) gameplayAlertsButton.active = global;
+        if (durationButton != null) durationButton.active = global;
+        if (visibleButton != null) visibleButton.active = global;
     }
 
     @Override
@@ -159,36 +177,39 @@ public final class LClientSettingsScreen extends Screen {
 
         int cx = width / 2;
         boolean compact = height < 270;
+        boolean tight = height < 220;
         int panelW = Math.min(460, Math.max(120, width - 20));
-        int panelTop = compact ? 6 : 14;
-        int panelBottom = compact ? 44 : 90;
+        int panelTop = tight ? 4 : compact ? 6 : 14;
+        int panelBottom = tight ? 34 : compact ? 42 : 90;
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelBottom, 0xB00D131A);
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelTop + 2, 0xFF6FC2FF);
 
-        graphics.drawCenteredString(font, title, cx, panelTop + 9, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, title, cx, panelTop + 8, 0xFFFFFFFF);
         int maxTextWidth = Math.max(80, panelW - 14);
-        if (compact) {
-            graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("Entrada global + avisos; los módulos siguen dentro de la ruleta.", maxTextWidth),
-                    cx,
-                    panelTop + 25,
-                    0xFF9FB1C0);
-        } else {
-            graphics.drawCenteredString(font,
-                    "La configuración global controla la entrada a Lclient y su HUD de avisos.",
-                    cx,
-                    panelTop + 29,
-                    0xFFB1C0CD);
-            graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ siguen administrándose desde la ruleta.", maxTextWidth),
-                    cx,
-                    panelTop + 45,
-                    0xFF8799AA);
-            graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("El historial vive sólo durante la sesión y no escribe spam adicional al disco.", maxTextWidth),
-                    cx,
-                    panelTop + 61,
-                    0xFF718596);
+        if (!tight) {
+            if (compact) {
+                graphics.drawCenteredString(font,
+                        font.plainSubstrByWidth("Entrada global + avisos; los módulos siguen dentro de la ruleta.", maxTextWidth),
+                        cx,
+                        panelTop + 24,
+                        0xFF9FB1C0);
+            } else {
+                graphics.drawCenteredString(font,
+                        "La configuración global controla la entrada a Lclient y su HUD de avisos.",
+                        cx,
+                        panelTop + 29,
+                        0xFFB1C0CD);
+                graphics.drawCenteredString(font,
+                        font.plainSubstrByWidth("Las alertas críticas cubren vida, inventario y durabilidad sin escribir al chat.", maxTextWidth),
+                        cx,
+                        panelTop + 45,
+                        0xFF8799AA);
+                graphics.drawCenteredString(font,
+                        font.plainSubstrByWidth("El historial vive sólo durante la sesión y no genera escrituras extra de disco.", maxTextWidth),
+                        cx,
+                        panelTop + 61,
+                        0xFF718596);
+            }
         }
 
         if (!warning.isBlank() && System.currentTimeMillis() <= warningUntil) {
@@ -212,5 +233,9 @@ public final class LClientSettingsScreen extends Screen {
             if (values[i] == current) return values[(i + 1) % values.length];
         }
         return values[0];
+    }
+
+    private static String yesNo(boolean value) {
+        return value ? "ACTIVADO" : "DESACTIVADO";
     }
 }
