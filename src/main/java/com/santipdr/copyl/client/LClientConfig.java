@@ -28,8 +28,12 @@ public final class LClientConfig {
     public int lootEspMinStack = 1;
     /** Adds a taller no-depth marker so loot remains obvious behind thick terrain. */
     public boolean lootEspBeacon = true;
-    /** Compact top-left summary of nearest grouped drops. */
+    /** Compact summary of nearest grouped drops. */
     public boolean lootEspHud = true;
+    /** Adds cardinal direction and relative height to nearest-loot rows. */
+    public boolean lootEspHudDirection = true;
+    /** HudAnchor ordinal; defaults to top-left. */
+    public int lootHudAnchor = HudAnchor.TOP_LEFT.ordinal();
 
     public boolean smartOffhand = true;
     public int foodThreshold = 14;
@@ -38,6 +42,8 @@ public final class LClientConfig {
     public String smartOffhandFoodId = "";
     /** When the selected food is missing, allow AUTO to choose another edible item. */
     public boolean smartOffhandFallbackToAuto = false;
+    /** Never temporarily replace shields/totems while Smart Offhand is deciding whether to equip food. */
+    public boolean smartOffhandProtectCombatItems = true;
 
     public boolean recon = true;
     public int reconZoomKey = GLFW.GLFW_KEY_C;
@@ -46,6 +52,10 @@ public final class LClientConfig {
     public int reconZoomFov = 24;
     /** Maximum long-range raycast used by Recon instead of vanilla reach. */
     public int reconRange = 256;
+    /** Extra movement/bearing/elevation line in the target panel. */
+    public boolean reconTelemetry = true;
+    /** HudAnchor ordinal; defaults to top-right. */
+    public int reconHudAnchor = HudAnchor.TOP_RIGHT.ordinal();
 
     public boolean journeyMap = true;
     public boolean journeyMapReconWaypoint = true;
@@ -58,6 +68,8 @@ public final class LClientConfig {
     public int notificationDurationSeconds = 5;
     /** Maximum simultaneous cards on screen. */
     public int notificationMaxVisible = 3;
+    /** HudAnchor ordinal; defaults to bottom-right. */
+    public int notificationHudAnchor = HudAnchor.BOTTOM_RIGHT.ordinal();
 
     public static synchronized LClientConfig get() {
         if (instance == null) instance = load();
@@ -106,6 +118,7 @@ public final class LClientConfig {
 
         lootEspRange = clamp(lootEspRange, 16, 192, 96);
         lootEspMinStack = clamp(lootEspMinStack, 1, 64, 1);
+        lootHudAnchor = sanitizeAnchor(lootHudAnchor, HudAnchor.TOP_LEFT);
 
         if (smartOffhandFoodId == null) smartOffhandFoodId = "";
         smartOffhandFoodId = smartOffhandFoodId.trim().toLowerCase(Locale.ROOT);
@@ -117,15 +130,21 @@ public final class LClientConfig {
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
         reconZoomFov = clamp(reconZoomFov, 8, 50, 24);
         reconRange = clamp(reconRange, 64, 512, 256);
+        reconHudAnchor = sanitizeAnchor(reconHudAnchor, HudAnchor.TOP_RIGHT);
 
         notificationDurationSeconds = clamp(notificationDurationSeconds, 2, 10, 5);
         notificationMaxVisible = clamp(notificationMaxVisible, 1, 5, 3);
+        notificationHudAnchor = sanitizeAnchor(notificationHudAnchor, HudAnchor.BOTTOM_RIGHT);
     }
 
     private static int sanitizeKey(int key, int fallback) {
         if (key == -1) return -1;
         if (key < GLFW.GLFW_KEY_SPACE || key > GLFW.GLFW_KEY_LAST) return fallback;
         return key;
+    }
+
+    private static int sanitizeAnchor(int value, HudAnchor fallback) {
+        return value >= 0 && value < HudAnchor.values().length ? value : fallback.ordinal();
     }
 
     private static int clamp(int value, int min, int max, int fallback) {
