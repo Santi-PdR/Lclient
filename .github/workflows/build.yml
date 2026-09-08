@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: lclient-build-${{ github.workflow }}-${{ github.ref }}
+  group: copyl-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(grep -E '^version = ' build.gradle | sed -E "s/version = ['\"]([^'\"]+)['\"]/\1/")"
-          JAR="build/libs/lclient-${VERSION}.jar"
+          JAR="build/libs/copyl-${VERSION}.jar"
           if [ ! -f "$JAR" ]; then
             echo "Expected final mod JAR was not produced: $JAR" >&2
             echo "Available files:" >&2
@@ -45,12 +45,12 @@ jobs:
           fi
 
           unzip -t "$JAR" >/dev/null
-          unzip -Z1 "$JAR" > /tmp/lclient-entries.txt
-          grep -Fxq 'META-INF/mods.toml' /tmp/lclient-entries.txt
-          grep -Fxq 'com/santipdr/copyl/CopyL.class' /tmp/lclient-entries.txt
+          unzip -Z1 "$JAR" > /tmp/copyl-entries.txt
+          grep -Fxq 'META-INF/mods.toml' /tmp/copyl-entries.txt
+          grep -Fxq 'com/santipdr/copyl/CopyL.class' /tmp/copyl-entries.txt
 
-          cp "$JAR" /tmp/lclient-latest.jar
-          SHA256="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
+          cp "$JAR" /tmp/copyl-latest.jar
+          SHA256="$(sha256sum /tmp/copyl-latest.jar | awk '{print $1}')"
           test -n "$SHA256"
 
           echo "jar_path=$JAR" >> "$GITHUB_OUTPUT"
@@ -60,7 +60,7 @@ jobs:
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: Lclient-${{ steps.jar.outputs.version }}
+          name: CopyL-${{ steps.jar.outputs.version }}
           path: ${{ steps.jar.outputs.jar_path }}
           if-no-files-found: error
 
@@ -81,7 +81,7 @@ jobs:
             exit 0
           fi
 
-          ACTUAL_SHA="$(sha256sum /tmp/lclient-latest.jar | awk '{print $1}')"
+          ACTUAL_SHA="$(sha256sum /tmp/copyl-latest.jar | awk '{print $1}')"
           if [ "$ACTUAL_SHA" != "$SHA256" ]; then
             echo "Installer JAR changed after validation." >&2
             exit 1
@@ -98,17 +98,18 @@ jobs:
             git rm -rf . || true
           fi
 
-          base64 -w 0 /tmp/lclient-latest.jar > lclient-latest.jar.b64
-          printf '\n' >> lclient-latest.jar.b64
+          base64 -w 0 /tmp/copyl-latest.jar > copyl-latest.jar.b64
+          printf '\n' >> copyl-latest.jar.b64
+          rm -f lclient-latest.jar.b64
           printf '%s\n' "$VERSION" > version.txt
           printf '%s\n' "$SHA256" > sha256.txt
           printf '%s\n' "$GITHUB_SHA" > source-commit.txt
 
-          git add lclient-latest.jar.b64 version.txt sha256.txt source-commit.txt
+          git add -A copyl-latest.jar.b64 lclient-latest.jar.b64 version.txt sha256.txt source-commit.txt
           if git diff --cached --quiet; then
             echo "Installer payload already matches this build."
             exit 0
           fi
 
-          git commit -m "build: publish Lclient ${VERSION} [skip ci]"
+          git commit -m "build: publish CopyL ${VERSION} [skip ci]"
           git push origin build-output
