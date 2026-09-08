@@ -48,6 +48,13 @@ public final class LClientConfig {
     public boolean journeyMap = true;
     public boolean journeyMapReconWaypoint = true;
 
+    /** Global, non-chat status surface shared by Lclient modules. */
+    public boolean notifications = true;
+    /** Lifetime of a notification card. */
+    public int notificationDurationSeconds = 5;
+    /** Maximum simultaneous cards on screen. */
+    public int notificationMaxVisible = 3;
+
     public static synchronized LClientConfig get() {
         if (instance == null) instance = load();
         return instance;
@@ -68,8 +75,6 @@ public final class LClientConfig {
             config.sanitize();
             String after = GSON.toJson(config);
             if (!before.equals(after)) {
-                // Persist migrations/repairs once instead of re-fixing the same
-                // invalid values on every Minecraft start.
                 AtomicConfigIO.write(PATH, after);
             }
             return config;
@@ -112,6 +117,9 @@ public final class LClientConfig {
         foodRestoreThreshold = clamp(foodRestoreThreshold, minRestore, 20, Math.max(minRestore, 18));
         reconZoomFov = clamp(reconZoomFov, 8, 50, 24);
         reconRange = clamp(reconRange, 64, 512, 256);
+
+        notificationDurationSeconds = clamp(notificationDurationSeconds, 2, 10, 5);
+        notificationMaxVisible = clamp(notificationMaxVisible, 1, 5, 3);
     }
 
     private static int sanitizeKey(int key, int fallback) {
