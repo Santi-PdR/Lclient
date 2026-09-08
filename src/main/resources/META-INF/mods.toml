@@ -3,45 +3,32 @@ loaderVersion="[47,)"
 license="All Rights Reserved"
 
 [[mods]]
-modId="lclient"
-version="2.8.0"
-displayName="Lclient"
+modId="copyl"
+version="3.0.0"
+displayName="CopyL"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
-Cliente modular 100% client-side para Forge 1.20.1.
+CopyL es un mod 100% client-side para Forge 1.20.1 dedicado exclusivamente a mensajes y comandos rápidos.
 
-Lclient 2.8 convierte la capa táctica de 2.7 en un sistema más estable y configurable. Advanced Recon mantiene zoom render-only y raycast largo, pero añade memoria corta de objetivo para evitar parpadeos del Target Panel y telemetría basada sólo en datos recibidos por el cliente: velocidad, cierre relativo, movimiento lateral, desnivel, rumbo y ángulo respecto a la mira. Los waypoints siguen forzando un raycast fresco.
+Incluye 10 slots configurables con nombre, mensaje/comando y tecla propia. La tecla global para abrir el editor y las teclas de cada slot se gestionan dentro de CopyL y no aparecen en Opciones > Controles.
 
-Loot ESP mantiene cajas/beacon x-ray y reutiliza su caché para un HUD opcional de drops cercanos. El resumen puede mostrar cantidad, distancia, rumbo cardinal y diferencia de altura sin lanzar un segundo escaneo de entidades.
+Los mensajes admiten variables del jugador y del objetivo actual de la mira vanilla, incluyendo coordenadas, dimensión, vida, hambre, orientación, tipo de objetivo, distancia, HP conocido, velocidad, desnivel, rumbo, movimiento e item visible.
 
-Smart Offhand conserva la restauración transaccional exacta y ahora puede proteger por defecto escudos y tótems para no reemplazarlos automáticamente al aparecer hambre.
-
-CopyL amplía sus variables con yaw/pitch y contexto táctico del objetivo: tipo, HP, velocidad, desnivel, rumbo, movimiento e item visible. Incluye una referencia de variables dentro del juego; con Recon activo usa el raycast largo y fuera de Recon usa la mira vanilla.
-
-Avisos, Loot HUD y Recon Panel pueden colocarse en distintas esquinas desde un editor visual. La configuración repara automáticamente layouts superpuestos. El Notification Center también avisa cuando quedan 1–2 slots de inventario antes de llegar a lleno.
-
-La ruleta funciona como hub: su centro abre Config global/HUD, y los sectores muestran el estado táctico de cada módulo. JourneyMap sigue siendo opcional/compileOnly y Lclient no necesita componentes del lado servidor.
+CopyL conserva configuración resistente a fallos, guardado atómico y recuperación de JSON corruptos. No incluye Loot ESP, Smart Offhand, Recon, HUD táctico, Notification Center ni integración con JourneyMap.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 
-[[dependencies.lclient]]
+[[dependencies.copyl]]
 modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="CLIENT"
 
-[[dependencies.lclient]]
+[[dependencies.copyl]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1,1.20.2)"
 ordering="NONE"
-side="CLIENT"
-
-[[dependencies.lclient]]
-modId="journeymap"
-mandatory=false
-versionRange="[5.10,)"
-ordering="AFTER"
 side="CLIENT"
