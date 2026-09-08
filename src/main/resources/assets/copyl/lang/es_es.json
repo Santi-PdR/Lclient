@@ -1,24 +1,10 @@
 {
   "key.categories.copyl": "CopyL — Mensajes rápidos",
-  "key.copyl.open_editor": "Abrir editor de mensajes de CopyL",
-  "key.copyl.slot.1": "Enviar mensaje rápido 1",
-  "key.copyl.slot.2": "Enviar mensaje rápido 2",
-  "key.copyl.slot.3": "Enviar mensaje rápido 3",
-  "key.copyl.slot.4": "Enviar mensaje rápido 4",
-  "key.copyl.slot.5": "Enviar mensaje rápido 5",
-  "key.copyl.slot.6": "Enviar mensaje rápido 6",
-  "key.copyl.slot.7": "Enviar mensaje rápido 7",
-  "key.copyl.slot.8": "Enviar mensaje rápido 8",
-  "key.copyl.slot.9": "Enviar mensaje rápido 9",
-  "key.copyl.slot.10": "Enviar mensaje rápido 10",
   "screen.copyl.title": "CopyL — Mensajes rápidos",
   "screen.copyl.subtitle": "Guarda hasta 10 mensajes o comandos y envíalos al instante con una tecla.",
-  "screen.copyl.controls_hint": "Haz clic en la tecla de cada espacio para cambiarla aquí mismo. Backspace/Delete la deja sin asignar.",
-  "screen.copyl.slot": "Mensaje %s",
   "screen.copyl.placeholder": "Escribe un mensaje o /comando...",
-  "screen.copyl.save": "Guardar y cerrar",
-  "screen.copyl.controls": "Controles avanzados",
-  "screen.copyl.key.waiting": "PULSA TECLA",
-  "screen.copyl.key.capture": "Editando tecla del mensaje %s — pulsa una tecla, Esc cancela",
-  "screen.copyl.key.tooltip": "Haz clic para cambiar esta tecla. También acepta botones del ratón."
+  "screen.copyl.save": "Guardar cambios",
+  "screen.copyl.cancel": "Cancelar",
+  "screen.copyl.variables": "Variables",
+  "screen.copyl.key.waiting": "PULSA TECLA"
 }
