@@ -135,6 +135,10 @@ public final class LClientConfig {
         notificationDurationSeconds = clamp(notificationDurationSeconds, 2, 10, 5);
         notificationMaxVisible = clamp(notificationMaxVisible, 1, 5, 3);
         notificationHudAnchor = sanitizeAnchor(notificationHudAnchor, HudAnchor.BOTTOM_RIGHT);
+
+        // Three independent panels should never render into the same corner.
+        reconHudAnchor = nextAvailableAnchor(reconHudAnchor, lootHudAnchor);
+        notificationHudAnchor = nextAvailableAnchor(notificationHudAnchor, lootHudAnchor, reconHudAnchor);
     }
 
     private static int sanitizeKey(int key, int fallback) {
@@ -145,6 +149,22 @@ public final class LClientConfig {
 
     private static int sanitizeAnchor(int value, HudAnchor fallback) {
         return value >= 0 && value < HudAnchor.values().length ? value : fallback.ordinal();
+    }
+
+    private static int nextAvailableAnchor(int preferred, int... occupied) {
+        int count = HudAnchor.values().length;
+        for (int offset = 0; offset < count; offset++) {
+            int candidate = Math.floorMod(preferred + offset, count);
+            boolean free = true;
+            for (int used : occupied) {
+                if (candidate == used) {
+                    free = false;
+                    break;
+                }
+            }
+            if (free) return candidate;
+        }
+        return preferred;
     }
 
     private static int clamp(int value, int min, int max, int fallback) {
