@@ -12,10 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Minimal persistent configuration for the CopyL-only client. */
+/** Minimal persistent configuration for CopyL. */
 public final class CopyLConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve("lclient.json");
+    private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve("copyl.json");
+    private static final Path LEGACY_PATH = FMLPaths.CONFIGDIR.get().resolve("lclient.json");
     private static CopyLConfig instance;
 
     /** Raw GLFW key used to open the CopyL editor. Not registered in vanilla Controls. */
@@ -27,30 +28,31 @@ public final class CopyLConfig {
     }
 
     private static CopyLConfig load() {
-        if (!Files.exists(PATH)) {
+        Path source = Files.exists(PATH) ? PATH : Files.exists(LEGACY_PATH) ? LEGACY_PATH : null;
+        if (source == null) {
             CopyLConfig config = new CopyLConfig();
             config.save();
             return config;
         }
 
-        try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
+        try (Reader reader = Files.newBufferedReader(source, StandardCharsets.UTF_8)) {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
             CopyLConfig config = new CopyLConfig();
 
-            // Preserve the old Lclient wheel key as CopyL's editor key during migration.
             if (root.has("openKey") && root.get("openKey").isJsonPrimitive()) {
                 config.openKey = root.get("openKey").getAsInt();
             } else if (root.has("wheelKey") && root.get("wheelKey").isJsonPrimitive()) {
+                // Legacy Lclient migration: the old wheel key becomes CopyL's editor key.
                 config.openKey = root.get("wheelKey").getAsInt();
             }
 
             config.sanitize();
-            // Always rewrite once so every removed Lclient-module field disappears from disk too.
             AtomicConfigIO.write(PATH, GSON.toJson(config));
+            if (source.equals(LEGACY_PATH)) Files.deleteIfExists(LEGACY_PATH);
             return config;
         } catch (Exception exception) {
-            Path backup = AtomicConfigIO.backupBroken(PATH);
-            System.err.println("[CopyL] No se pudo leer " + PATH + ": " + exception.getMessage()
+            Path backup = AtomicConfigIO.backupBroken(source);
+            System.err.println("[CopyL] No se pudo leer " + source + ": " + exception.getMessage()
                     + (backup == null ? "" : " · copia: " + backup));
             CopyLConfig config = new CopyLConfig();
             config.save();
