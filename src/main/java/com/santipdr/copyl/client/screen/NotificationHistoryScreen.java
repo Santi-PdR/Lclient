@@ -32,13 +32,14 @@ public final class NotificationHistoryScreen extends Screen {
         page = Math.max(0, Math.min(page, maxPage));
 
         int cx = width / 2;
-        int buttonWidth = Math.min(300, Math.max(140, width - 24));
+        int buttonWidth = Math.min(300, Math.max(112, width - 16));
         int left = cx - buttonWidth / 2;
-        int y = height - 27;
-        int gap = 6;
-        int nav = 34;
-        int middle = Math.max(60, (buttonWidth - nav * 2 - gap * 2) / 2);
-        int clearWidth = Math.max(1, buttonWidth - nav * 2 - middle - gap * 3);
+        int y = Math.max(2, height - 24);
+        int gap = 4;
+        int nav = Math.min(32, Math.max(24, buttonWidth / 5));
+        int remaining = Math.max(2, buttonWidth - nav * 2 - gap * 3);
+        int clearWidth = Math.max(1, remaining / 2);
+        int backWidth = Math.max(1, remaining - clearWidth);
 
         Button previous = addRenderableWidget(Button.builder(Component.literal("◀"), b -> {
             if (page > 0) {
@@ -55,7 +56,7 @@ public final class NotificationHistoryScreen extends Screen {
         }).bounds(left + nav + gap, y, clearWidth, 20).build()).active = !entries.isEmpty();
 
         addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose())
-                .bounds(left + nav + gap + clearWidth + gap, y, middle, 20).build());
+                .bounds(left + nav + gap + clearWidth + gap, y, backWidth, 20).build());
 
         Button next = addRenderableWidget(Button.builder(Component.literal("▶"), b -> {
             if (page < maxPage) {
@@ -67,7 +68,7 @@ public final class NotificationHistoryScreen extends Screen {
     }
 
     private int pageSize() {
-        return Math.max(3, Math.min(10, (height - 74) / 28));
+        return Math.max(1, Math.min(10, (height - 72) / 28));
     }
 
     @Override
@@ -78,21 +79,21 @@ public final class NotificationHistoryScreen extends Screen {
         int maxPage = entries.isEmpty() ? 0 : (entries.size() - 1) / pageSize;
         page = Math.max(0, Math.min(page, maxPage));
 
-        graphics.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFFFF);
         String subtitle = entries.isEmpty()
                 ? "Todavía no hay avisos en esta sesión."
                 : entries.size() + " avisos · página " + (page + 1) + "/" + (maxPage + 1);
         graphics.drawCenteredString(font,
-                font.plainSubstrByWidth(subtitle, Math.max(100, width - 20)),
+                font.plainSubstrByWidth(subtitle, Math.max(80, width - 16)),
                 width / 2,
-                25,
+                23,
                 0xFF94A7B8);
 
-        int cardWidth = Math.min(520, Math.max(140, width - 20));
+        int cardWidth = Math.min(520, Math.max(100, width - 16));
         int left = (width - cardWidth) / 2;
         int from = page * pageSize;
         int to = Math.min(entries.size(), from + pageSize);
-        int y = 43;
+        int y = 40;
 
         for (int i = from; i < to; i++) {
             LClientNotifications.HistoryEntry entry = entries.get(i);
@@ -103,14 +104,14 @@ public final class NotificationHistoryScreen extends Screen {
             String time = TIME.format(Instant.ofEpochMilli(entry.timestamp()));
             String titleLine = time + "  ·  " + entry.title();
             graphics.drawString(font,
-                    font.plainSubstrByWidth(titleLine, cardWidth - 14),
+                    font.plainSubstrByWidth(titleLine, Math.max(20, cardWidth - 14)),
                     left + 7,
                     y + 4,
                     0xFFF0F5F9,
                     false);
             if (!entry.message().isBlank()) {
                 graphics.drawString(font,
-                        font.plainSubstrByWidth(entry.message(), cardWidth - 14),
+                        font.plainSubstrByWidth(entry.message(), Math.max(20, cardWidth - 14)),
                         left + 7,
                         y + 13,
                         0xFF91A3B3,
