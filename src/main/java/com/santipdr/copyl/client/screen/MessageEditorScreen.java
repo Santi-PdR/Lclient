@@ -151,6 +151,9 @@ public final class MessageEditorScreen extends Screen {
             }).bounds(width / 2 - 62, pagerY, 28, 16).build());
             previous.active = page > 0;
 
+            addRenderableWidget(Button.builder(Component.literal("Variables"), b -> openVariables())
+                    .bounds(width / 2 - 31, pagerY, 62, 16).build());
+
             Button next = addRenderableWidget(Button.builder(Component.literal("▶"), b -> {
                 if (page < maxPage) {
                     captureFields();
@@ -160,6 +163,9 @@ public final class MessageEditorScreen extends Screen {
                 }
             }).bounds(width / 2 + 34, pagerY, 28, 16).build());
             next.active = page < maxPage;
+        } else {
+            addRenderableWidget(Button.builder(Component.literal("Ver variables tácticas"), b -> openVariables())
+                    .bounds(width / 2 - 74, 59, 148, 16).build());
         }
 
         int visibleRows = compact ? pageSize : 5;
@@ -170,6 +176,12 @@ public final class MessageEditorScreen extends Screen {
                 .bounds(width / 2 - actionWidth - 4, bottom, actionWidth, actionHeight).build());
         addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> cancelAndClose())
                 .bounds(width / 2 + 4, bottom, actionWidth, actionHeight).build());
+    }
+
+    private void openVariables() {
+        captureFields();
+        bindingIndex = -1;
+        if (minecraft != null) minecraft.setScreen(new CopyLVariablesScreen(this));
     }
 
     private boolean useCompactLayout() {
@@ -291,15 +303,10 @@ public final class MessageEditorScreen extends Screen {
                     28,
                     0xFFAAB7C4);
             graphics.drawCenteredString(font,
-                    "Jugador: {pos} {x} {y} {z} {dim} {hp} {food} {name}",
+                    "Variables de jugador + objetivo + telemetría disponibles dentro del editor.",
                     width / 2,
                     43,
                     0xFF7F93A6);
-            graphics.drawCenteredString(font,
-                    "Objetivo: {target} {targetdist} {targetpos} {targetx} {targety} {targetz}",
-                    width / 2,
-                    56,
-                    0xFF71879A);
         }
 
         if (!warning.isBlank() && System.currentTimeMillis() <= warningUntil) {
