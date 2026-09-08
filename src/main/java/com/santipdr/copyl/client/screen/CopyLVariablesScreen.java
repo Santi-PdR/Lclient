@@ -87,7 +87,7 @@ public final class CopyLVariablesScreen extends Screen {
 
         graphics.drawCenteredString(font, title, width / 2, 9, 0xFFFFFFFF);
         graphics.drawCenteredString(font,
-                font.plainSubstrByWidth("Durante Recon, las variables target usan el raycast largo; fuera de Recon usan la mira vanilla.", Math.max(100, width - 20)),
+                font.plainSubstrByWidth("Las variables target usan únicamente el objetivo actual de la mira vanilla del cliente.", Math.max(100, width - 20)),
                 width / 2,
                 23,
                 0xFF91A6B7);
