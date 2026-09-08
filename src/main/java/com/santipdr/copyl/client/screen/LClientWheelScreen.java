@@ -2,6 +2,7 @@ package com.santipdr.copyl.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.client.CopyLKeyMappings;
+import com.santipdr.copyl.client.HudAnchor;
 import com.santipdr.copyl.client.LClientConfig;
 import com.santipdr.copyl.client.MessageConfig;
 import com.santipdr.copyl.client.integration.JourneyMapBridge;
@@ -15,11 +16,11 @@ import net.minecraft.world.item.ItemStack;
 
 public final class LClientWheelScreen extends Screen {
     public enum Module {
-        COPYL("CopyL", "Mensajes y comandos rápidos con slots nombrados"),
-        LOOT_ESP("Loot ESP", "X-ray de objetos cargados + toggle instantáneo"),
-        SMART_OFFHAND("Smart Offhand", "Comida elegible y restauración segura de offhand"),
-        RECON("Advanced Recon", "Zoom táctico variable + raycast largo + waypoint"),
-        JOURNEYMAP("JourneyMap+", "Integración táctica opcional para Recon");
+        COPYL("CopyL", "Mensajes/comandos con variables de jugador y objetivo"),
+        LOOT_ESP("Loot ESP", "X-ray de drops + lista direccional opcional"),
+        SMART_OFFHAND("Smart Offhand", "Comida automática con protección de offhand de combate"),
+        RECON("Advanced Recon", "Zoom largo + TRACK estable + telemetría táctica"),
+        JOURNEYMAP("JourneyMap+", "Integración opcional de waypoints para Recon");
 
         public final String title;
         public final String subtitle;
@@ -32,6 +33,7 @@ public final class LClientWheelScreen extends Screen {
 
     private final Screen parent;
     private Module selected;
+    private boolean centerHovered;
 
     public LClientWheelScreen(Screen parent) {
         super(Component.literal("Lclient"));
@@ -50,11 +52,12 @@ public final class LClientWheelScreen extends Screen {
         int cx = width / 2;
         int cy = height / 2;
         selected = moduleAt(mouseX, mouseY, cx, cy);
+        centerHovered = selected == null && isCenter(mouseX, mouseY, cx, cy);
 
         renderCenter(graphics, cx, cy);
         renderModules(graphics, cx, cy);
 
-        int footerWidth = Math.max(140, width - 28);
+        int footerWidth = Math.max(100, width - 28);
         if (selected != null) {
             String subtitle = font.plainSubstrByWidth(selected.subtitle, footerWidth);
             graphics.drawCenteredString(font, subtitle, cx, height - 42, 0xFFD1DCE6);
@@ -74,23 +77,39 @@ public final class LClientWheelScreen extends Screen {
                     cx,
                     height - 16,
                     0xFF8293A3);
+        } else if (centerHovered) {
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth("Click: Config global + distribución HUD", footerWidth),
+                    cx,
+                    height - 16,
+                    0xFF93BEDB);
         } else {
-            graphics.drawCenteredString(font, "Esc: cerrar", cx, height - 16, 0xFF71808E);
+            graphics.drawCenteredString(font, "Centro: Config global · Esc: cerrar", cx, height - 16, 0xFF71808E);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderCenter(GuiGraphics graphics, int cx, int cy) {
-        int size = Math.min(50, Math.max(34, Math.min(width, height) / 6));
-        graphics.fill(cx - size - 1, cy - size - 1, cx + size + 1, cy + size + 1, 0x804B6A83);
-        graphics.fill(cx - size, cy - size, cx + size, cy + size, 0xF00D131A);
+        int size = centerSize();
+        int border = centerHovered ? 0xFF6FC2FF : 0x804B6A83;
+        graphics.fill(cx - size - 1, cy - size - 1, cx + size + 1, cy + size + 1, border);
+        graphics.fill(cx - size, cy - size, cx + size, cy + size, centerHovered ? 0xF0182936 : 0xF00D131A);
         graphics.fill(cx - size, cy - size, cx + size, cy - size + 2, 0xFF6FC2FF);
         graphics.drawCenteredString(font, "LCLIENT", cx, cy - Math.min(20, size - 12), 0xFFF4F8FB);
 
         if (selected == null) {
-            graphics.drawCenteredString(font, "5 módulos", cx, cy, 0xFF9EB0C0);
-            if (size >= 42) graphics.drawCenteredString(font, "client-side", cx, cy + 14, 0xFF718393);
+            LClientConfig c = LClientConfig.get();
+            graphics.drawCenteredString(font,
+                    centerHovered ? "CONFIG" : "5 módulos",
+                    cx,
+                    cy,
+                    centerHovered ? 0xFF9ED8FF : 0xFF9EB0C0);
+            if (size >= 42) {
+                String status = c.notifications ? "avisos ON" : "avisos OFF";
+                graphics.drawCenteredString(font, status, cx, cy + 14,
+                        c.notifications ? 0xFF7FCF91 : 0xFF8B959E);
+            }
         } else {
             boolean enabled = isEnabled(selected);
             graphics.drawCenteredString(font,
@@ -161,6 +180,16 @@ public final class LClientWheelScreen extends Screen {
         return moduleFromAngle(Math.atan2(ny, nx));
     }
 
+    private boolean isCenter(double mouseX, double mouseY, int cx, int cy) {
+        int size = centerSize();
+        return mouseX >= cx - size && mouseX <= cx + size
+                && mouseY >= cy - size && mouseY <= cy + size;
+    }
+
+    private int centerSize() {
+        return Math.min(50, Math.max(34, Math.min(width, height) / 6));
+    }
+
     private double radiusX() {
         return Math.max(76.0D, Math.min(160.0D, (width - 140.0D) / 2.0D));
     }
@@ -180,10 +209,13 @@ public final class LClientWheelScreen extends Screen {
     private String compactStatus(Module module) {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case COPYL -> configuredMessages() + "/10 listos";
-            case LOOT_ESP -> keyName(c.lootEspToggleKey) + " · " + c.lootEspRange + "m";
-            case SMART_OFFHAND -> foodName(c.smartOffhandFoodId);
-            case RECON -> keyName(c.reconZoomKey) + " · FOV " + c.reconZoomFov;
+            case COPYL -> configuredMessages() + "/10 · " + boundMessages() + " teclas";
+            case LOOT_ESP -> keyName(c.lootEspToggleKey) + " · " + c.lootEspRange + "m"
+                    + (c.lootEspHud ? " · HUD" : "");
+            case SMART_OFFHAND -> foodName(c.smartOffhandFoodId)
+                    + (c.smartOffhandProtectCombatItems ? " · SAFE" : "");
+            case RECON -> keyName(c.reconZoomKey) + " · FOV " + c.reconZoomFov
+                    + (c.reconTelemetry ? " · TEL" : "");
             case JOURNEYMAP -> !c.journeyMap ? "apagado" : JourneyMapBridge.isReady() ? "API lista" : "revisar";
         };
     }
@@ -191,12 +223,16 @@ public final class LClientWheelScreen extends Screen {
     private String statusLine(Module module) {
         LClientConfig c = LClientConfig.get();
         return switch (module) {
-            case COPYL -> configuredMessages() + " mensajes configurados · " + boundMessages() + " con tecla";
-            case LOOT_ESP -> "Toggle " + keyName(c.lootEspToggleKey) + " · " + c.lootEspRange + "m · stack ≥ " + c.lootEspMinStack;
+            case COPYL -> configuredMessages() + " mensajes · " + boundMessages()
+                    + " con tecla · variables tácticas integradas";
+            case LOOT_ESP -> "Toggle " + keyName(c.lootEspToggleKey) + " · " + c.lootEspRange + "m · stack ≥ "
+                    + c.lootEspMinStack + (c.lootEspHud ? " · HUD "
+                    + HudAnchor.fromConfig(c.lootHudAnchor, HudAnchor.TOP_LEFT).displayName() : "");
             case SMART_OFFHAND -> "Comida: " + foodName(c.smartOffhandFoodId)
-                    + (c.smartOffhandFallbackToAuto ? " · fallback AUTO" : " · selección estricta");
+                    + (c.smartOffhandFallbackToAuto ? " · fallback AUTO" : " · selección estricta")
+                    + (c.smartOffhandProtectCombatItems ? " · escudo/tótem protegido" : "");
             case RECON -> "Zoom " + keyName(c.reconZoomKey) + " · waypoint " + keyName(c.reconWaypointKey)
-                    + " · raycast " + c.reconRange + "m";
+                    + " · " + c.reconRange + "m" + (c.reconTelemetry ? " · telemetría ON" : " · telemetría OFF");
             case JOURNEYMAP -> !c.journeyMap ? "JourneyMap+ desactivado" : JourneyMapBridge.getStatusText();
         };
     }
@@ -267,7 +303,15 @@ public final class LClientWheelScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (selected == null || minecraft == null) return super.mouseClicked(mouseX, mouseY, button);
+        if (minecraft == null) return super.mouseClicked(mouseX, mouseY, button);
+
+        if (selected == null) {
+            if (button == 0 && isCenter(mouseX, mouseY, width / 2, height / 2)) {
+                minecraft.setScreen(new LClientSettingsScreen(this));
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
 
         if (button == 1) {
             toggle(selected);
