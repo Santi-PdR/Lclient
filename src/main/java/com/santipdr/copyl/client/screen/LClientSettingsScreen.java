@@ -3,6 +3,7 @@ package com.santipdr.copyl.client.screen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.client.CopyLKeyMappings;
 import com.santipdr.copyl.client.LClientConfig;
+import com.santipdr.copyl.client.LClientNotifications;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -13,6 +14,9 @@ import org.lwjgl.glfw.GLFW;
 public final class LClientSettingsScreen extends Screen {
     private final Screen parent;
     private Button keyButton;
+    private Button notificationsButton;
+    private Button durationButton;
+    private Button visibleButton;
     private boolean capturing;
     private String warning = "";
     private long warningUntil;
@@ -25,32 +29,75 @@ public final class LClientSettingsScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        boolean compact = height < 220;
-        int buttonWidth = Math.max(80, Math.min(240, width - 24));
-        int top = compact ? Math.min(66, Math.max(42, height / 3)) : height / 2 - 18;
+        boolean compact = height < 250;
+        int buttonWidth = Math.min(250, Math.max(120, width - 24));
+        int top = compact ? 54 : height / 2 - 54;
         int buttonHeight = compact ? 18 : 20;
+        int step = buttonHeight + (compact ? 5 : 7);
+        int left = cx - buttonWidth / 2;
 
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
             capturing = true;
             warning = "";
             b.setMessage(Component.literal("PULSA UNA TECLA"));
-        }).bounds(cx - buttonWidth / 2, top, buttonWidth, buttonHeight).build());
+        }).bounds(left, top, buttonWidth, buttonHeight).build());
 
-        int gap = Math.min(8, Math.max(4, buttonWidth / 20));
-        int half = Math.max(34, (buttonWidth - gap) / 2);
+        notificationsButton = addRenderableWidget(Button.builder(notificationsLabel(), b -> {
+            LClientConfig config = LClientConfig.get();
+            config.notifications = !config.notifications;
+            config.save();
+            if (!config.notifications) LClientNotifications.clearActive();
+            refreshLabels();
+        }).bounds(left, top + step, buttonWidth, buttonHeight).build());
+
+        durationButton = addRenderableWidget(Button.builder(durationLabel(), b -> {
+            LClientConfig config = LClientConfig.get();
+            config.notificationDurationSeconds = cycle(config.notificationDurationSeconds, 2, 3, 4, 5, 7, 10);
+            config.save();
+            refreshLabels();
+        }).bounds(left, top + step * 2, buttonWidth, buttonHeight).build());
+
+        visibleButton = addRenderableWidget(Button.builder(visibleLabel(), b -> {
+            LClientConfig config = LClientConfig.get();
+            config.notificationMaxVisible = cycle(config.notificationMaxVisible, 1, 2, 3, 4, 5);
+            config.save();
+            refreshLabels();
+        }).bounds(left, top + step * 3, buttonWidth, buttonHeight).build());
+
+        int gap = 8;
+        int half = Math.max(54, (buttonWidth - gap) / 2);
+        int actionsY = top + step * 4 + (compact ? 1 : 3);
         addRenderableWidget(Button.builder(Component.literal("Abrir ruleta"), b -> {
                     if (minecraft != null) minecraft.setScreen(new LClientWheelScreen(this));
                 })
-                .bounds(cx - buttonWidth / 2, top + buttonHeight + 10, half, buttonHeight).build());
+                .bounds(left, actionsY, half, buttonHeight).build());
         addRenderableWidget(Button.builder(Component.literal("Cerrar"), b -> onClose())
-                .bounds(cx - buttonWidth / 2 + half + gap, top + buttonHeight + 10,
-                        Math.max(34, buttonWidth - half - gap), buttonHeight).build());
+                .bounds(left + half + gap, actionsY, Math.max(1, buttonWidth - half - gap), buttonHeight).build());
     }
 
     private Component keyLabel() {
         int key = LClientConfig.get().wheelKey;
         String name = key < 0 ? "Sin asignar" : InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
         return Component.literal("Tecla de la ruleta: " + name);
+    }
+
+    private Component notificationsLabel() {
+        return Component.literal("Centro de notificaciones: " + (LClientConfig.get().notifications ? "ACTIVADO" : "DESACTIVADO"));
+    }
+
+    private Component durationLabel() {
+        return Component.literal("Duración de avisos: " + LClientConfig.get().notificationDurationSeconds + " s");
+    }
+
+    private Component visibleLabel() {
+        return Component.literal("Avisos simultáneos: " + LClientConfig.get().notificationMaxVisible);
+    }
+
+    private void refreshLabels() {
+        if (keyButton != null && !capturing) keyButton.setMessage(keyLabel());
+        if (notificationsButton != null) notificationsButton.setMessage(notificationsLabel());
+        if (durationButton != null) durationButton.setMessage(durationLabel());
+        if (visibleButton != null) visibleButton.setMessage(visibleLabel());
     }
 
     @Override
@@ -106,42 +153,42 @@ public final class LClientSettingsScreen extends Screen {
         renderBackground(graphics);
 
         int cx = width / 2;
-        boolean compact = height < 220;
-        int panelW = Math.max(80, Math.min(440, width - 24));
-        int panelTop = compact ? 8 : 18;
-        int panelBottom = compact ? Math.min(56, Math.max(42, height / 3)) : 96;
+        boolean compact = height < 250;
+        int panelW = Math.min(460, Math.max(120, width - 20));
+        int panelTop = compact ? 7 : 16;
+        int panelBottom = compact ? 46 : 92;
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelBottom, 0xB00D131A);
         graphics.fill(cx - panelW / 2, panelTop, cx + panelW / 2, panelTop + 2, 0xFF6FC2FF);
 
-        graphics.drawCenteredString(font,
-                font.plainSubstrByWidth(title.getString(), Math.max(40, panelW - 12)),
-                cx, panelTop + 10, 0xFFFFFFFF);
-        int maxTextWidth = Math.max(40, panelW - 14);
+        graphics.drawCenteredString(font, title, cx, panelTop + 9, 0xFFFFFFFF);
+        int maxTextWidth = Math.max(80, panelW - 14);
         if (compact) {
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("Configura la entrada a Lclient; el resto vive dentro de la ruleta.", maxTextWidth),
+                    font.plainSubstrByWidth("Entrada global + avisos; los módulos siguen dentro de la ruleta.", maxTextWidth),
                     cx,
-                    panelTop + 27,
+                    panelTop + 25,
                     0xFF9FB1C0);
         } else {
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("La configuración global controla la entrada a Lclient.", maxTextWidth),
-                    cx, 50, 0xFFB1C0CD);
-            graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ viven dentro de la ruleta.", maxTextWidth),
+                    "La configuración global controla la entrada a Lclient y su HUD de avisos.",
                     cx,
-                    64,
+                    panelTop + 29,
+                    0xFFB1C0CD);
+            graphics.drawCenteredString(font,
+                    font.plainSubstrByWidth("CopyL, Loot ESP, Smart Offhand, Recon y JourneyMap+ siguen administrándose desde la ruleta.", maxTextWidth),
+                    cx,
+                    panelTop + 45,
                     0xFF8799AA);
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth("Las teclas reservadas se protegen para evitar dobles acciones accidentales.", maxTextWidth),
+                    font.plainSubstrByWidth("Los avisos no usan el chat y se ocultan automáticamente mientras hay otra pantalla abierta.", maxTextWidth),
                     cx,
-                    78,
+                    panelTop + 61,
                     0xFF718596);
         }
 
         if (!warning.isBlank() && System.currentTimeMillis() <= warningUntil) {
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth(warning, Math.max(40, width - 20)),
+                    font.plainSubstrByWidth(warning, Math.max(80, width - 20)),
                     cx,
                     height - 10,
                     0xFFFFB28A);
@@ -153,5 +200,12 @@ public final class LClientSettingsScreen extends Screen {
     public void onClose() {
         capturing = false;
         if (minecraft != null) minecraft.setScreen(parent);
+    }
+
+    private static int cycle(int current, int... values) {
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == current) return values[(i + 1) % values.length];
+        }
+        return values[0];
     }
 }
