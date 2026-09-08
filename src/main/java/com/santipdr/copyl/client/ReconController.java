@@ -30,6 +30,7 @@ import net.minecraftforge.fml.common.Mod;
 public final class ReconController {
     private static final long ZOOM_SAVE_DEBOUNCE_MS = 450L;
     private static final long TARGET_CACHE_NS = 33_000_000L;
+    private static final long TARGET_MEMORY_MS = 650L;
     private static final double TARGET_EYE_EPSILON_SQ = 0.0025D;
     private static final double TARGET_LOOK_DOT_MIN = 0.99995D;
 
@@ -49,6 +50,10 @@ public final class ReconController {
     private static Vec3 targetCacheLook;
     private static int targetCacheRange = -1;
     private static long targetCacheUntilNs;
+
+    private static ClientLevel trackedEntityLevel;
+    private static Entity trackedEntity;
+    private static long trackedEntityUntilMs;
 
     private ReconController() {
     }
@@ -80,6 +85,7 @@ public final class ReconController {
             smoothedFov = -1.0D;
             scrollAccumulator = 0.0D;
             invalidateTargetCache();
+            clearTrackedEntity();
         }
         if (wasZoomActive && !zoomActive) {
             flushZoomConfigIfDue(config, true);
@@ -133,7 +139,9 @@ public final class ReconController {
         event.setFOV(Math.min(smoothedFov, unzoomedFov));
     }
 
-    public static boolean isZoomActive() { return zoomActive; }
+    public static boolean isZoomActive() {
+        return zoomActive;
+    }
 
     public static int getZoomFov() {
         Minecraft minecraft = Minecraft.getInstance();
@@ -167,6 +175,7 @@ public final class ReconController {
     private static HitResult getTargetHit(Minecraft minecraft, boolean forceFresh) {
         if (minecraft.player == null || minecraft.level == null) {
             invalidateTargetCache();
+            clearTrackedEntity();
             return null;
         }
 
@@ -176,6 +185,7 @@ public final class ReconController {
         long nowNs = System.nanoTime();
 
         if (!forceFresh && canReuseTarget(minecraft.level, eye, look, range, nowNs)) {
+            rememberEntityFromHit(minecraft.level, targetCacheHit);
             return targetCacheHit;
         }
 
@@ -186,8 +196,6 @@ public final class ReconController {
                     eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraft.player
             ));
         } catch (RuntimeException | LinkageError ignored) {
-            // A broken modded collision hook somewhere along a long ray should
-            // not bring down the entire HUD. Fall back to the intended direction.
             blockHit = BlockHitResult.miss(
                     end,
                     Direction.getNearest((float) look.x, (float) look.y, (float) look.z),
@@ -211,8 +219,7 @@ public final class ReconController {
                     blockDistanceSq
             );
         } catch (RuntimeException | LinkageError ignored) {
-            // If a third-party entity breaks collision/pickability code, the
-            // block result is still useful and Recon remains operational.
+            // A broken third-party entity must not take the entire Recon HUD down.
         }
 
         HitResult result = entityHit != null ? entityHit : blockHit;
@@ -222,6 +229,7 @@ public final class ReconController {
         targetCacheLook = look;
         targetCacheRange = range;
         targetCacheUntilNs = nowNs + TARGET_CACHE_NS;
+        rememberEntityFromHit(minecraft.level, result);
         return result;
     }
 
@@ -246,6 +254,32 @@ public final class ReconController {
         if (targetCacheHit instanceof EntityHitResult entityHit && entityHit.getEntity().isRemoved()) return false;
         if (targetCacheEye.distanceToSqr(eye) > TARGET_EYE_EPSILON_SQ) return false;
         return targetCacheLook.dot(look) >= TARGET_LOOK_DOT_MIN;
+    }
+
+    private static void rememberEntityFromHit(ClientLevel level, HitResult hit) {
+        if (!(hit instanceof EntityHitResult entityHit)) return;
+        Entity entity = entityHit.getEntity();
+        if (entity == null || entity.isRemoved()) return;
+        trackedEntityLevel = level;
+        trackedEntity = entity;
+        trackedEntityUntilMs = System.currentTimeMillis() + TARGET_MEMORY_MS;
+    }
+
+    public static Entity getTrackedEntity(Minecraft minecraft) {
+        if (!zoomActive || minecraft == null || minecraft.level == null || trackedEntity == null) return null;
+        if (trackedEntityLevel != minecraft.level
+                || trackedEntity.isRemoved()
+                || System.currentTimeMillis() > trackedEntityUntilMs) {
+            clearTrackedEntity();
+            return null;
+        }
+        return trackedEntity;
+    }
+
+    public static boolean isTrackedFromMemory(HitResult currentHit, Entity entity) {
+        if (entity == null) return false;
+        if (currentHit instanceof EntityHitResult entityHit) return entityHit.getEntity() != entity;
+        return true;
     }
 
     public static BlockPos targetBlockPos(HitResult hit) {
@@ -347,6 +381,12 @@ public final class ReconController {
         targetCacheUntilNs = 0L;
     }
 
+    private static void clearTrackedEntity() {
+        trackedEntityLevel = null;
+        trackedEntity = null;
+        trackedEntityUntilMs = 0L;
+    }
+
     private static void resetRuntime() {
         zoomActive = false;
         waypointKeyDown = false;
@@ -356,6 +396,7 @@ public final class ReconController {
         statusText = "";
         statusUntil = 0L;
         invalidateTargetCache();
+        clearTrackedEntity();
     }
 
     private static boolean keyDown(Minecraft minecraft, int keyCode) {
