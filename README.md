@@ -2,23 +2,11 @@
 
 CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CopyL 3.0.0
+## CopyL 3.1.0
 
-A partir de 3.0 el proyecto deja de ser un cliente modular. Se eliminaron completamente del código y del JAR:
+CopyL 3.1 simplifica todavía más el mod y mejora su presentación visual.
 
-- Loot ESP
-- Smart Offhand
-- Advanced Recon
-- HUD táctico
-- Notification Center
-- JourneyMap+
-- ruleta de módulos
-- editor de HUD
-- cualquier dependencia de JourneyMap
-
-No están ocultos ni desactivados: sus clases, pantallas, configuración y dependencias fueron borradas.
-
-## Función principal
+### Qué hace
 
 CopyL ofrece **10 slots** independientes. Cada slot tiene:
 
@@ -28,9 +16,11 @@ CopyL ofrece **10 slots** independientes. Cada slot tiene:
 
 Si el texto empieza con `/`, CopyL lo envía como comando. En cualquier otro caso lo envía como mensaje de chat.
 
-Las teclas de CopyL se leen directamente con GLFW y **no aparecen en `Opciones > Controles`**.
+El contenido se envía **exactamente como fue escrito**. CopyL ya no sustituye variables, placeholders ni datos del jugador/objetivo.
 
-## Abrir el editor
+Las teclas se leen directamente con GLFW y **no aparecen en `Opciones > Controles`**.
+
+## Abrir CopyL
 
 La tecla de apertura por defecto es `Alt derecho`.
 
@@ -38,62 +28,44 @@ Se puede cambiar desde:
 
 `Mods > CopyL > Config`
 
-La pantalla de configuración sólo contiene:
+La pantalla de configuración muestra:
 
 - tecla para abrir CopyL;
-- botón para abrir el editor de mensajes.
+- resumen de slots configurados y atajos asignados;
+- acceso directo al editor.
 
-Si venías de Lclient 2.x, CopyL intenta conservar la antigua tecla de la ruleta como nueva tecla de apertura. Después migra `config/lclient.json` a `config/copyl.json` y elimina el archivo viejo.
+## Editor 3.1
 
-## Editor
+El editor fue rediseñado con una interfaz más limpia y consistente:
+
+- tarjetas visuales por slot;
+- numeración clara `01–10`;
+- indicador visual de slots configurados;
+- nombre, tecla y mensaje agrupados en la misma tarjeta;
+- dos columnas en pantallas amplias;
+- paginación automática en ventanas pequeñas;
+- soporte para GUI Scale alto;
+- encabezado con estado general;
+- guardado y cancelación claramente separados;
+- avisos de conflictos de teclas integrados en la interfaz.
 
 El editor mantiene:
 
 - guardado transaccional;
-- Cancelar sin aplicar cambios;
+- `Cancelar` sin aplicar cambios;
 - `Ctrl+Enter` para guardar;
 - nombres de hasta 24 caracteres;
 - mensajes de hasta 256 caracteres;
 - prevención de teclas duplicadas;
-- prevención de conflicto con la tecla global de apertura;
-- layouts adaptativos para ventanas pequeñas y GUI Scale alto;
-- paginación automática;
-- ayuda de variables integrada.
+- prevención de conflicto con la tecla global de apertura.
 
 La configuración de mensajes se guarda en:
 
 `config/copyl-messages.json`
 
-## Variables
+La configuración general se guarda en:
 
-### Jugador
-
-- `{pos}` — coordenadas completas
-- `{x}` `{y}` `{z}` — coordenadas separadas
-- `{dim}` — dimensión
-- `{hp}` — vida
-- `{food}` — hambre
-- `{name}` — nombre
-- `{yaw}` — giro horizontal de cámara
-- `{pitch}` — giro vertical de cámara
-
-### Objetivo actual
-
-Estas variables usan **únicamente `minecraft.hitResult`**, es decir, el objetivo que ya está bajo la mira vanilla del cliente.
-
-- `{target}` — nombre del objetivo
-- `{targettype}` — tipo/registry ID
-- `{targetdist}` — distancia
-- `{targetpos}` — coordenadas completas
-- `{targetx}` `{targety}` `{targetz}` — coordenadas separadas
-- `{targethp}` `{targetmaxhp}` — vida actual/máxima conocida
-- `{targetspeed}` — velocidad aproximada en m/s
-- `{targetdy}` — diferencia de altura respecto al jugador
-- `{targetbearing}` — rumbo cardinal
-- `{targetmotion}` — izquierda/derecha/acercándose/alejándose/estable
-- `{targetitem}` — item visible en mano u offhand
-
-Para bloques, las variables que sólo aplican a entidades devuelven `-`.
+`config/copyl.json`
 
 ## Configuración resistente a fallos
 
@@ -107,13 +79,31 @@ Si un JSON está corrupto:
 
 `copyl-messages.json` también repara automáticamente arrays antiguos, teclas inválidas, duplicados y conflictos con la tecla global.
 
+Si venías de Lclient 2.x, CopyL intenta conservar la antigua tecla de la ruleta como nueva tecla de apertura durante la migración.
+
+## Qué NO incluye
+
+Desde CopyL 3.0 el proyecto dejó de ser un cliente modular. No contiene:
+
+- Loot ESP;
+- Smart Offhand;
+- Advanced Recon;
+- HUD táctico;
+- Notification Center;
+- JourneyMap+;
+- ruleta de módulos;
+- editor de HUD;
+- dependencias de JourneyMap.
+
+En 3.1 también se eliminó completamente el antiguo sistema de variables y su pantalla de ayuda.
+
 ## Compatibilidad
 
 - Minecraft 1.20.1
 - Forge 47.x
 - Java 17
-- sin dependencia de JourneyMap
-- sin componente server-side
+- sin componentes server-side
+- sin dependencias adicionales
 
 ## Build
 
@@ -123,7 +113,7 @@ Si un JSON está corrupto:
 
 El JAR final es:
 
-`build/libs/copyl-3.0.0.jar`
+`build/libs/copyl-3.1.0.jar`
 
 GitHub Actions:
 
@@ -132,5 +122,4 @@ GitHub Actions:
 - verifica `META-INF/mods.toml` y `CopyL.class`;
 - calcula SHA-256;
 - publica el artifact `CopyL-<version>`;
-- en `main`, publica `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`;
-- elimina el antiguo payload `lclient-latest.jar.b64` al publicar CopyL 3.x.
+- en `main`, publica `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`.
