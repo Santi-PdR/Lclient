@@ -1,8 +1,0 @@
-Manifest-Version: 1.0
-Specification-Title: CopyL
-Specification-Vendor: Santi-PdR
-Specification-Version: 3
-Implementation-Title: CopyL
-Implementation-Version: 3.1.0
-Implementation-Vendor: Santi-PdR
-

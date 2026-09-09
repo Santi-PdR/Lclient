@@ -1,9 +1,0 @@
-{
-  "key.categories.copyl": "CopyL — Mensajes rápidos",
-  "screen.copyl.title": "CopyL — Mensajes rápidos",
-  "screen.copyl.subtitle": "Guarda hasta 10 mensajes o comandos y envíalos al instante con una tecla.",
-  "screen.copyl.placeholder": "Escribe un mensaje o /comando...",
-  "screen.copyl.save": "Guardar cambios",
-  "screen.copyl.cancel": "Cancelar",
-  "screen.copyl.key.waiting": "PULSA TECLA"
-}
