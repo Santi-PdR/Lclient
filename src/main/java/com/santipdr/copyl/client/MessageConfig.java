@@ -3,7 +3,6 @@ package com.santipdr.copyl.client;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraftforge.fml.loading.FMLPaths;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -62,30 +61,115 @@ public final class MessageConfig {
         return keyCodes[index];
     }
 
-    /** Assigning a key to one CopyL slot clears it from every other slot. */
+    /** Assigning one binding to a slot clears it from every other slot. */
     public synchronized void setKeyCode(int index, int keyCode) {
         ensureLoaded();
         checkIndex(index);
-        keyCode = sanitizeKey(keyCode);
+        keyCode = CopyLBinding.sanitize(keyCode);
         if (keyCode >= 0) {
             for (int i = 0; i < keyCodes.length; i++) {
-                if (i != index && keyCodes[i] == keyCode) keyCodes[i] = -1;
+                if (i != index && keyCodes[i] == keyCode) keyCodes[i] = CopyLBinding.UNBOUND;
             }
         }
         keyCodes[index] = keyCode;
     }
 
-    public synchronized void save() {
+    public synchronized String[] copyNames() {
         ensureLoaded();
-        writeCurrentState();
+        return names.clone();
     }
 
-    private void writeCurrentState() {
+    public synchronized String[] copyMessages() {
+        ensureLoaded();
+        return messages.clone();
+    }
+
+    public synchronized int[] copyKeyCodes() {
+        ensureLoaded();
+        return keyCodes.clone();
+    }
+
+    /**
+     * Applies the whole editor state transactionally: disk is written first and the live
+     * configuration only changes after that write succeeds.
+     */
+    public synchronized boolean replaceAll(String[] newNames, String[] newMessages, int[] newKeys) {
+        ensureLoaded();
+        if (newNames == null || newMessages == null || newKeys == null
+                || newNames.length != names.length
+                || newMessages.length != messages.length
+                || newKeys.length != keyCodes.length) {
+            return false;
+        }
+
+        String[] normalizedNames = new String[names.length];
+        String[] normalizedMessages = new String[messages.length];
+        int[] normalizedKeys = new int[keyCodes.length];
+
+        for (int i = 0; i < names.length; i++) {
+            normalizedNames[i] = normalizeName(newNames[i], i);
+            normalizedMessages[i] = normalizeMessage(newMessages[i]);
+
+            int binding = CopyLBinding.sanitize(newKeys[i]);
+            if (binding >= 0) {
+                for (int j = 0; j < i; j++) {
+                    if (normalizedKeys[j] == binding) {
+                        normalizedKeys[j] = CopyLBinding.UNBOUND;
+                        break;
+                    }
+                }
+            }
+            normalizedKeys[i] = binding;
+        }
+
+        int openBinding = CopyLConfig.get().openKey;
+        if (openBinding >= 0) {
+            for (int i = 0; i < normalizedKeys.length; i++) {
+                if (normalizedKeys[i] == openBinding) normalizedKeys[i] = CopyLBinding.UNBOUND;
+            }
+        }
+
+        ConfigData next = new ConfigData(normalizedNames, normalizedMessages, normalizedKeys);
+        if (!writeData(next)) return false;
+
+        System.arraycopy(normalizedNames, 0, names, 0, names.length);
+        System.arraycopy(normalizedMessages, 0, messages, 0, messages.length);
+        System.arraycopy(normalizedKeys, 0, keyCodes, 0, keyCodes.length);
+        return true;
+    }
+
+    /** Clears a binding from any slot without mutating live state when persistence fails. */
+    public synchronized boolean clearBindingAndSave(int binding) {
+        ensureLoaded();
+        if (binding < 0) return true;
+
+        int[] nextKeys = keyCodes.clone();
+        boolean changed = false;
+        for (int i = 0; i < nextKeys.length; i++) {
+            if (nextKeys[i] == binding) {
+                nextKeys[i] = CopyLBinding.UNBOUND;
+                changed = true;
+            }
+        }
+        return !changed || replaceAll(names.clone(), messages.clone(), nextKeys);
+    }
+
+    public synchronized boolean save() {
+        ensureLoaded();
+        return writeCurrentState();
+    }
+
+    private boolean writeCurrentState() {
+        return writeData(new ConfigData(names.clone(), messages.clone(), keyCodes.clone()));
+    }
+
+    private boolean writeData(ConfigData data) {
         try {
-            ConfigData data = new ConfigData(names.clone(), messages.clone(), keyCodes.clone());
             AtomicConfigIO.write(CONFIG_PATH, GSON.toJson(data));
+            return true;
         } catch (Exception exception) {
             System.err.println("[CopyL] No se pudo guardar " + CONFIG_PATH + ": " + exception.getMessage());
+            return false;
         }
     }
 
@@ -121,20 +205,20 @@ public final class MessageConfig {
 
             if (data.keyCodes == null || data.keyCodes.length != keyCodes.length) repaired = true;
             for (int i = 0; i < keyCodes.length; i++) {
-                int raw = data.keyCodes != null && i < data.keyCodes.length ? data.keyCodes[i] : -1;
-                int key = sanitizeKey(raw);
-                if (key != raw) repaired = true;
+                int raw = data.keyCodes != null && i < data.keyCodes.length ? data.keyCodes[i] : CopyLBinding.UNBOUND;
+                int binding = CopyLBinding.sanitize(raw);
+                if (binding != raw) repaired = true;
 
-                if (key >= 0) {
+                if (binding >= 0) {
                     for (int j = 0; j < i; j++) {
-                        if (keyCodes[j] == key) {
-                            key = -1;
+                        if (keyCodes[j] == binding) {
+                            binding = CopyLBinding.UNBOUND;
                             repaired = true;
                             break;
                         }
                     }
                 }
-                keyCodes[i] = key;
+                keyCodes[i] = binding;
             }
 
             if (clearReservedConflict(CopyLConfig.get().openKey)) repaired = true;
@@ -153,7 +237,7 @@ public final class MessageConfig {
         boolean changed = false;
         for (int i = 0; i < keyCodes.length; i++) {
             if (keyCodes[i] == openKey) {
-                keyCodes[i] = -1;
+                keyCodes[i] = CopyLBinding.UNBOUND;
                 changed = true;
             }
         }
@@ -163,13 +247,7 @@ public final class MessageConfig {
     private void resetDefaults() {
         for (int i = 0; i < names.length; i++) names[i] = defaultName(i);
         Arrays.fill(messages, "");
-        Arrays.fill(keyCodes, -1);
-    }
-
-    private static int sanitizeKey(int key) {
-        if (key == -1) return -1;
-        if (key < GLFW.GLFW_KEY_SPACE || key > GLFW.GLFW_KEY_LAST) return -1;
-        return key;
+        Arrays.fill(keyCodes, CopyLBinding.UNBOUND);
     }
 
     private static String normalizeMessage(String value) {
