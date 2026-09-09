@@ -138,3 +138,7 @@ GitHub Actions:
 - calcula SHA-256;
 - publica el artifact `CopyL-<version>`;
 - en `main`, publica `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`.
+
+## Deploy
+
+El PowerShell de deploy no compila nada localmente. Lee `version.txt` y `sha256.txt`, descarga `copyl-latest.jar.b64`, verifica su SHA-256 y reemplaza únicamente versiones anteriores de CopyL/Lclient en la instancia configurada. Por eso el mismo script puede instalar futuras versiones publicadas sin editar el número de versión a mano.
