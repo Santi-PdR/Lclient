@@ -105,7 +105,10 @@ jobs:
           printf '%s\n' "$SHA256" > sha256.txt
           printf '%s\n' "$GITHUB_SHA" > source-commit.txt
 
-          git add -A copyl-latest.jar.b64 lclient-latest.jar.b64 version.txt sha256.txt source-commit.txt
+          # build-output only contains installer metadata/payload files, so stage the
+          # complete branch state. This also records deletion of any legacy payload
+          # without failing when that legacy file is already absent.
+          git add -A
           if git diff --cached --quiet; then
             echo "Installer payload already matches this build."
             exit 0
