@@ -2,9 +2,9 @@
 
 CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CopyL 3.2.0
+## CopyL 3.3.0
 
-CopyL 3.2 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— pero mejora bastante la robustez, los atajos y la experiencia del editor.
+CopyL 3.3 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
 
 ### Qué hace
 
@@ -22,69 +22,60 @@ Los atajos se leen directamente y **no aparecen en `Opciones > Controles`**.
 
 ## Atajos de teclado y mouse
 
-Desde 3.2 tanto la tecla global como los 10 slots aceptan:
+La tecla global y los 10 slots aceptan:
 
 - teclas del teclado;
 - botones del mouse soportados por GLFW.
 
-La tecla de apertura por defecto sigue siendo `Alt derecho`.
-
-Se cambia desde:
+La tecla de apertura por defecto es `Alt derecho` y se cambia desde:
 
 `Mods > CopyL > Config`
 
-Si un atajo ya pertenece a otro slot, al reasignarlo se mueve al slot nuevo en lugar de dejar dos acciones superpuestas.
+Si un atajo ya pertenece a otro slot, al reasignarlo se mueve al slot nuevo. La tecla usada para abrir CopyL queda reservada y no puede activar un mensaje al mismo tiempo.
 
-La tecla usada para abrir CopyL queda reservada y no puede activar un mensaje al mismo tiempo.
+## Editor
 
-## Editor 3.2
+La interfaz usa tarjetas `01–10` y mantiene:
 
-La interfaz mantiene el diseño de tarjetas de 3.1 y añade más feedback útil:
-
-- tarjetas `01–10` con hover;
 - estado visual distinto para slot completo, incompleto o vacío;
-- etiqueta `CHAT` / `CMD` según el contenido;
-- botón `×` para limpiar rápidamente mensaje + atajo de un slot sin borrar su nombre;
+- etiqueta `CHAT` / `CMD` / `KEY`;
+- botón `×` para limpiar mensaje + atajo sin borrar el nombre;
 - dos columnas en pantallas amplias;
 - paginación automática en ventanas pequeñas;
 - soporte para GUI Scale alto;
 - resumen de mensajes y atajos activos;
-- avisos de conflictos dentro de la propia pantalla.
+- avisos de conflictos dentro de la propia pantalla;
+- `Ctrl+S` y `Ctrl+Enter` para guardar;
+- confirmación antes de descartar cambios sin guardar.
 
-Atajos del editor:
+## Backup y restauración 3.3
 
-- `Ctrl+S` — guardar;
-- `Ctrl+Enter` — guardar;
-- `Backspace/Delete` durante captura — quitar el atajo;
-- `Esc` durante captura — cancelar la captura.
+Desde `Mods > CopyL > Config` hay dos acciones nuevas:
 
-### Protección de cambios sin guardar
+- **Copiar backup** — coloca en el portapapeles un JSON portable con el atajo global y los 10 nombres, mensajes y atajos.
+- **Importar backup** — restaura ese JSON en otra instancia.
 
-Si modificaste algo y pulsás `Cancelar` o `Esc`, CopyL **no descarta inmediatamente** el trabajo. Primero avisa; hay que repetir la acción durante unos segundos para confirmar el descarte.
+La importación:
+
+1. exige una segunda confirmación para no sobrescribir la configuración por accidente;
+2. valida formato, versión del esquema, cantidad de slots y bindings;
+3. elimina conflictos con el atajo global;
+4. usa el guardado transaccional de CopyL.
+
+El backup no contiene información externa al mod: sólo la configuración de CopyL.
 
 ## Guardado transaccional
-
-El editor ya no modifica primero el estado en memoria para luego intentar escribirlo.
-
-En 3.2:
-
-1. se normalizan los 10 slots;
-2. se valida que no existan atajos duplicados/conflictivos;
-3. se escribe el JSON de forma atómica;
-4. sólo si esa escritura funciona se reemplaza la configuración viva.
-
-Si Windows, un antivirus u otro proceso bloquea temporalmente el archivo, el editor permanece abierto y muestra un error para poder reintentar. No aparenta haber guardado algo que en realidad falló.
 
 Los archivos son:
 
 - `config/copyl.json` — atajo global;
 - `config/copyl-messages.json` — nombres, mensajes y atajos de los 10 slots.
 
+CopyL normaliza y valida el estado antes de escribirlo. Si Windows, un antivirus u otro proceso bloquea temporalmente un archivo, la interfaz conserva los cambios abiertos y muestra el error en vez de aparentar que se guardó correctamente.
+
 Si un JSON está corrupto, CopyL intenta moverlo a `*.broken-<timestamp>` y reconstruir una configuración válida.
 
 ## Idiomas
-
-La interfaz usa traducciones reales en vez de texto español hardcodeado.
 
 Incluye:
 
@@ -99,7 +90,7 @@ Incluye:
 
 ## Qué NO incluye
 
-Desde CopyL 3.0 el proyecto dejó de ser un cliente modular. No contiene:
+CopyL no contiene:
 
 - Loot ESP;
 - Smart Offhand;
@@ -128,7 +119,7 @@ Desde CopyL 3.0 el proyecto dejó de ser un cliente modular. No contiene:
 
 El JAR final es:
 
-`build/libs/copyl-3.2.0.jar`
+`build/libs/copyl-3.3.0.jar`
 
 GitHub Actions:
 
@@ -137,8 +128,10 @@ GitHub Actions:
 - verifica `META-INF/mods.toml` y `CopyL.class`;
 - calcula SHA-256;
 - publica el artifact `CopyL-<version>`;
-- en `main`, publica `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`.
+- en `main`, publica únicamente `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt` en `build-output`;
+- publica desde un worktree aislado para que `.gradle/`, `build/` o el wrapper generado nunca contaminen `build-output`;
+- serializa builds de una misma rama sin permitir que eventos viejos cancelen el HEAD actual.
 
 ## Deploy
 
-El PowerShell de deploy no compila nada localmente. Lee `version.txt` y `sha256.txt`, descarga `copyl-latest.jar.b64`, verifica su SHA-256 y reemplaza únicamente versiones anteriores de CopyL/Lclient en la instancia configurada. Por eso el mismo script puede instalar futuras versiones publicadas sin editar el número de versión a mano.
+El PowerShell de deploy no compila nada localmente. Lee `version.txt` y `sha256.txt`, descarga `copyl-latest.jar.b64`, verifica su SHA-256 y reemplaza únicamente versiones anteriores de CopyL/Lclient en la instancia configurada. El mismo script puede instalar futuras versiones publicadas sin editar el número de versión a mano.
