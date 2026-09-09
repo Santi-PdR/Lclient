@@ -8,6 +8,8 @@ public final class CopyLClientSetup {
     private CopyLClientSetup() {
     }
 
+    /** Forge 47.x still exposes the config-screen extension through ModLoadingContext#get(). */
+    @SuppressWarnings("removal")
     public static void registerConfigScreen() {
         ModLoadingContext.get().registerExtensionPoint(
                 ConfigScreenHandler.ConfigScreenFactory.class,
