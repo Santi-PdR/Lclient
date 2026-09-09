@@ -1,6 +1,5 @@
 package com.santipdr.copyl.client;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.santipdr.copyl.CopyL;
 import com.santipdr.copyl.client.screen.MessageEditorScreen;
 import net.minecraft.client.Minecraft;
@@ -17,13 +16,13 @@ import java.util.Arrays;
 public final class CopyLClientEvents {
     private static final int MAX_OUTGOING_MESSAGE_LENGTH = 256;
 
-    private static final boolean[] messageKeyDown = new boolean[CopyLKeyMappings.SLOT_COUNT];
-    private static final int[] observedMessageKeys = new int[CopyLKeyMappings.SLOT_COUNT];
-    private static boolean openKeyDown;
-    private static int observedOpenKey = Integer.MIN_VALUE;
+    private static final boolean[] messageBindingDown = new boolean[CopyLKeyMappings.SLOT_COUNT];
+    private static final int[] observedMessageBindings = new int[CopyLKeyMappings.SLOT_COUNT];
+    private static boolean openBindingDown;
+    private static int observedOpenBinding = Integer.MIN_VALUE;
 
     static {
-        Arrays.fill(observedMessageKeys, Integer.MIN_VALUE);
+        Arrays.fill(observedMessageBindings, Integer.MIN_VALUE);
     }
 
     private CopyLClientEvents() {
@@ -35,28 +34,28 @@ public final class CopyLClientEvents {
 
         Minecraft minecraft = Minecraft.getInstance();
         CopyLConfig config = CopyLConfig.get();
-        pollOpenKey(minecraft, config);
+        pollOpenBinding(minecraft, config);
         pollQuickMessages(minecraft, config);
     }
 
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        resetTransientKeys();
+        resetTransientBindings();
     }
 
-    private static void pollOpenKey(Minecraft minecraft, CopyLConfig config) {
-        int key = config.openKey;
-        boolean down = keyDown(minecraft, key);
-        if (observedOpenKey != key) {
-            observedOpenKey = key;
-            openKeyDown = down;
+    private static void pollOpenBinding(Minecraft minecraft, CopyLConfig config) {
+        int binding = config.openKey;
+        boolean down = CopyLBinding.isDown(minecraft, binding);
+        if (observedOpenBinding != binding) {
+            observedOpenBinding = binding;
+            openBindingDown = down;
             return;
         }
 
-        if (down && !openKeyDown && minecraft.screen == null) {
+        if (down && !openBindingDown && minecraft.screen == null) {
             minecraft.setScreen(new MessageEditorScreen(null));
         }
-        openKeyDown = down;
+        openBindingDown = down;
     }
 
     private static void pollQuickMessages(Minecraft minecraft, CopyLConfig config) {
@@ -65,19 +64,21 @@ public final class CopyLClientEvents {
                 && minecraft.player.connection != null
                 && minecraft.screen == null;
 
-        for (int i = 0; i < messageKeyDown.length; i++) {
-            int key = messages.getKeyCode(i);
-            boolean reserved = key >= 0 && key == config.openKey;
-            boolean down = key >= 0 && !reserved && keyDown(minecraft, key);
+        for (int i = 0; i < messageBindingDown.length; i++) {
+            int binding = messages.getKeyCode(i);
+            boolean reserved = binding >= 0 && binding == config.openKey;
+            boolean down = binding >= 0 && !reserved && CopyLBinding.isDown(minecraft, binding);
 
-            if (observedMessageKeys[i] != key) {
-                observedMessageKeys[i] = key;
-                messageKeyDown[i] = down;
+            if (observedMessageBindings[i] != binding) {
+                observedMessageBindings[i] = binding;
+                messageBindingDown[i] = down;
                 continue;
             }
 
-            if (canSend && down && !messageKeyDown[i]) sendSlot(minecraft, i);
-            messageKeyDown[i] = down;
+            // Physical state is tracked even while another screen is open. That way closing
+            // inventory/chat/config while holding a CopyL binding never creates a fake new press.
+            if (canSend && down && !messageBindingDown[i]) sendSlot(minecraft, i);
+            messageBindingDown[i] = down;
         }
     }
 
@@ -87,8 +88,7 @@ public final class CopyLClientEvents {
         String message = MessageConfig.getInstance().getMessage(slot);
         if (message == null || message.isBlank()) return;
 
-        // CopyL 3.1 sends exactly what the user configured. No placeholders,
-        // target inspection or hidden transformation is performed here.
+        // CopyL sends exactly what the user configured. No placeholders or hidden transforms.
         message = truncateUtf16Safely(message, MAX_OUTGOING_MESSAGE_LENGTH);
         if (message.isBlank()) return;
 
@@ -111,14 +111,10 @@ public final class CopyLClientEvents {
         return value.substring(0, end);
     }
 
-    private static void resetTransientKeys() {
-        openKeyDown = false;
-        observedOpenKey = Integer.MIN_VALUE;
-        Arrays.fill(messageKeyDown, false);
-        Arrays.fill(observedMessageKeys, Integer.MIN_VALUE);
-    }
-
-    private static boolean keyDown(Minecraft minecraft, int keyCode) {
-        return keyCode >= 0 && InputConstants.isKeyDown(minecraft.getWindow().getWindow(), keyCode);
+    private static void resetTransientBindings() {
+        openBindingDown = false;
+        observedOpenBinding = Integer.MIN_VALUE;
+        Arrays.fill(messageBindingDown, false);
+        Arrays.fill(observedMessageBindings, Integer.MIN_VALUE);
     }
 }

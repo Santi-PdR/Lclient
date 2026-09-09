@@ -2,9 +2,9 @@
 
 CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CopyL 3.1.0
+## CopyL 3.2.0
 
-CopyL 3.1 simplifica todavía más el mod y mejora su presentación visual.
+CopyL 3.2 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— pero mejora bastante la robustez, los atajos y la experiencia del editor.
 
 ### Qué hace
 
@@ -12,74 +12,90 @@ CopyL ofrece **10 slots** independientes. Cada slot tiene:
 
 - nombre;
 - mensaje o comando;
-- tecla propia.
+- atajo propio de teclado o mouse.
 
 Si el texto empieza con `/`, CopyL lo envía como comando. En cualquier otro caso lo envía como mensaje de chat.
 
-El contenido se envía **exactamente como fue escrito**. CopyL ya no sustituye variables, placeholders ni datos del jugador/objetivo.
+El contenido se envía **exactamente como fue escrito**. No existen variables, placeholders ni lectura de coordenadas/vida/objetivos.
 
-Las teclas se leen directamente con GLFW y **no aparecen en `Opciones > Controles`**.
+Los atajos se leen directamente y **no aparecen en `Opciones > Controles`**.
 
-## Abrir CopyL
+## Atajos de teclado y mouse
 
-La tecla de apertura por defecto es `Alt derecho`.
+Desde 3.2 tanto la tecla global como los 10 slots aceptan:
 
-Se puede cambiar desde:
+- teclas del teclado;
+- botones del mouse soportados por GLFW.
+
+La tecla de apertura por defecto sigue siendo `Alt derecho`.
+
+Se cambia desde:
 
 `Mods > CopyL > Config`
 
-La pantalla de configuración muestra:
+Si un atajo ya pertenece a otro slot, al reasignarlo se mueve al slot nuevo en lugar de dejar dos acciones superpuestas.
 
-- tecla para abrir CopyL;
-- resumen de slots configurados y atajos asignados;
-- acceso directo al editor.
+La tecla usada para abrir CopyL queda reservada y no puede activar un mensaje al mismo tiempo.
 
-## Editor 3.1
+## Editor 3.2
 
-El editor fue rediseñado con una interfaz más limpia y consistente:
+La interfaz mantiene el diseño de tarjetas de 3.1 y añade más feedback útil:
 
-- tarjetas visuales por slot;
-- numeración clara `01–10`;
-- indicador visual de slots configurados;
-- nombre, tecla y mensaje agrupados en la misma tarjeta;
+- tarjetas `01–10` con hover;
+- estado visual distinto para slot completo, incompleto o vacío;
+- etiqueta `CHAT` / `CMD` según el contenido;
+- botón `×` para limpiar rápidamente mensaje + atajo de un slot sin borrar su nombre;
 - dos columnas en pantallas amplias;
 - paginación automática en ventanas pequeñas;
 - soporte para GUI Scale alto;
-- encabezado con estado general;
-- guardado y cancelación claramente separados;
-- avisos de conflictos de teclas integrados en la interfaz.
+- resumen de mensajes y atajos activos;
+- avisos de conflictos dentro de la propia pantalla.
 
-El editor mantiene:
+Atajos del editor:
 
-- guardado transaccional;
-- `Cancelar` sin aplicar cambios;
-- `Ctrl+Enter` para guardar;
-- nombres de hasta 24 caracteres;
-- mensajes de hasta 256 caracteres;
-- prevención de teclas duplicadas;
-- prevención de conflicto con la tecla global de apertura.
+- `Ctrl+S` — guardar;
+- `Ctrl+Enter` — guardar;
+- `Backspace/Delete` durante captura — quitar el atajo;
+- `Esc` durante captura — cancelar la captura.
 
-La configuración de mensajes se guarda en:
+### Protección de cambios sin guardar
 
-`config/copyl-messages.json`
+Si modificaste algo y pulsás `Cancelar` o `Esc`, CopyL **no descarta inmediatamente** el trabajo. Primero avisa; hay que repetir la acción durante unos segundos para confirmar el descarte.
 
-La configuración general se guarda en:
+## Guardado transaccional
 
-`config/copyl.json`
+El editor ya no modifica primero el estado en memoria para luego intentar escribirlo.
 
-## Configuración resistente a fallos
+En 3.2:
 
-`copyl.json` y `copyl-messages.json` usan escritura temporal y reemplazo atómico cuando el sistema lo permite.
+1. se normalizan los 10 slots;
+2. se valida que no existan atajos duplicados/conflictivos;
+3. se escribe el JSON de forma atómica;
+4. sólo si esa escritura funciona se reemplaza la configuración viva.
 
-Si un JSON está corrupto:
+Si Windows, un antivirus u otro proceso bloquea temporalmente el archivo, el editor permanece abierto y muestra un error para poder reintentar. No aparenta haber guardado algo que en realidad falló.
 
-1. se mueve a `*.broken-<timestamp>`;
-2. se genera una configuración válida;
-3. CopyL puede volver a iniciar sin releer indefinidamente el archivo roto.
+Los archivos son:
 
-`copyl-messages.json` también repara automáticamente arrays antiguos, teclas inválidas, duplicados y conflictos con la tecla global.
+- `config/copyl.json` — atajo global;
+- `config/copyl-messages.json` — nombres, mensajes y atajos de los 10 slots.
 
-Si venías de Lclient 2.x, CopyL intenta conservar la antigua tecla de la ruleta como nueva tecla de apertura durante la migración.
+Si un JSON está corrupto, CopyL intenta moverlo a `*.broken-<timestamp>` y reconstruir una configuración válida.
+
+## Idiomas
+
+La interfaz usa traducciones reales en vez de texto español hardcodeado.
+
+Incluye:
+
+- `en_us`;
+- `es_es`;
+- `es_ar`;
+- `es_cl`;
+- `es_ec`;
+- `es_mx`;
+- `es_uy`;
+- `es_ve`.
 
 ## Qué NO incluye
 
@@ -93,9 +109,8 @@ Desde CopyL 3.0 el proyecto dejó de ser un cliente modular. No contiene:
 - JourneyMap+;
 - ruleta de módulos;
 - editor de HUD;
+- variables/placeholders;
 - dependencias de JourneyMap.
-
-En 3.1 también se eliminó completamente el antiguo sistema de variables y su pantalla de ayuda.
 
 ## Compatibilidad
 
@@ -113,7 +128,7 @@ En 3.1 también se eliminó completamente el antiguo sistema de variables y su p
 
 El JAR final es:
 
-`build/libs/copyl-3.1.0.jar`
+`build/libs/copyl-3.2.0.jar`
 
 GitHub Actions:
 

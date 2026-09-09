@@ -19,7 +19,7 @@ public final class CopyLConfig {
     private static final Path LEGACY_PATH = FMLPaths.CONFIGDIR.get().resolve("lclient.json");
     private static CopyLConfig instance;
 
-    /** Raw GLFW key used to open the CopyL editor. Not registered in vanilla Controls. */
+    /** Raw CopyL binding used to open the editor. Not registered in vanilla Controls. */
     public int openKey = GLFW.GLFW_KEY_RIGHT_ALT;
 
     public static synchronized CopyLConfig get() {
@@ -42,7 +42,7 @@ public final class CopyLConfig {
             if (root.has("openKey") && root.get("openKey").isJsonPrimitive()) {
                 config.openKey = root.get("openKey").getAsInt();
             } else if (root.has("wheelKey") && root.get("wheelKey").isJsonPrimitive()) {
-                // Legacy Lclient migration: the old wheel key becomes CopyL's editor key.
+                // Legacy Lclient migration: the old wheel key becomes CopyL's editor binding.
                 config.openKey = root.get("wheelKey").getAsInt();
             }
 
@@ -71,18 +71,20 @@ public final class CopyLConfig {
     }
 
     private void sanitize() {
-        if (openKey == -1) return;
-        if (openKey < GLFW.GLFW_KEY_SPACE || openKey > GLFW.GLFW_KEY_LAST) {
-            openKey = GLFW.GLFW_KEY_RIGHT_ALT;
-        }
+        if (openKey == CopyLBinding.UNBOUND) return;
+        int sanitized = CopyLBinding.sanitize(openKey);
+        openKey = sanitized == CopyLBinding.UNBOUND ? GLFW.GLFW_KEY_RIGHT_ALT : sanitized;
     }
 
-    public synchronized void save() {
+    /** Returns false when persistence fails so the UI can keep the old binding active. */
+    public synchronized boolean save() {
         sanitize();
         try {
             AtomicConfigIO.write(PATH, GSON.toJson(this));
+            return true;
         } catch (Exception exception) {
             System.err.println("[CopyL] No se pudo guardar " + PATH + ": " + exception.getMessage());
+            return false;
         }
     }
 }
