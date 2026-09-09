@@ -10,40 +10,47 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
-/** Minimal Mods > CopyL > Config surface. */
+/** Minimal and polished Mods > CopyL > Config surface. */
 public final class CopyLSettingsScreen extends Screen {
     private final Screen parent;
     private Button keyButton;
     private boolean capturing;
     private String feedback = "";
     private long feedbackUntil;
+    private int panelLeft;
+    private int panelTop;
+    private int panelWidth;
+    private int panelHeight;
 
     public CopyLSettingsScreen(Screen parent) {
-        super(Component.literal("CopyL — Configuración"));
+        super(Component.literal("CopyL"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        int cx = width / 2;
-        int buttonW = Math.min(280, Math.max(130, width - 24));
-        int left = cx - buttonW / 2;
-        int h = height < 210 ? 18 : 20;
-        int step = h + 7;
-        int top = Math.max(48, height / 2 - 46);
+        panelWidth = Math.min(420, Math.max(240, width - 28));
+        panelHeight = Math.min(190, Math.max(156, height - 70));
+        panelLeft = (width - panelWidth) / 2;
+        panelTop = Math.max(42, (height - panelHeight) / 2);
+
+        int innerLeft = panelLeft + 20;
+        int innerWidth = panelWidth - 40;
+        int buttonHeight = 20;
+        int firstY = panelTop + 72;
 
         keyButton = addRenderableWidget(Button.builder(keyLabel(), b -> {
             capturing = true;
             feedback = "";
             b.setMessage(Component.literal("PULSA UNA TECLA"));
-        }).bounds(left, top, buttonW, h).build());
+        }).bounds(innerLeft, firstY, innerWidth, buttonHeight).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Editar mensajes CopyL"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Editar mensajes"), b -> {
             if (minecraft != null) minecraft.setScreen(new MessageEditorScreen(this));
-        }).bounds(left, top + step, buttonW, h).build());
+        }).bounds(innerLeft, firstY + 29, innerWidth, buttonHeight).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Cerrar"), b -> onClose())
-                .bounds(left, top + step * 2, buttonW, h).build());
+        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose())
+                .bounds(innerLeft, firstY + 58, innerWidth, buttonHeight).build());
     }
 
     private Component keyLabel() {
@@ -51,7 +58,7 @@ public final class CopyLSettingsScreen extends Screen {
         String name = key < 0
                 ? "Sin asignar"
                 : InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
-        return Component.literal("Tecla para abrir CopyL: " + name);
+        return Component.literal("Abrir CopyL  •  " + name);
     }
 
     @Override
@@ -74,7 +81,7 @@ public final class CopyLSettingsScreen extends Screen {
         config.save();
         capturing = false;
         keyButton.setMessage(keyLabel());
-        feedback = newKey < 0 ? "Tecla de apertura eliminada." : "Tecla actualizada.";
+        feedback = newKey < 0 ? "Tecla de apertura eliminada" : "Tecla de apertura actualizada";
         feedbackUntil = System.currentTimeMillis() + 2200L;
         return true;
     }
@@ -94,22 +101,61 @@ public final class CopyLSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        int cx = width / 2;
-        graphics.drawCenteredString(font, title, cx, 18, 0xFFFFFFFF);
-        graphics.drawCenteredString(font,
-                font.plainSubstrByWidth("CopyL es ahora la única función del mod. Sus teclas no aparecen en Opciones > Controles.", Math.max(100, width - 24)),
-                cx,
-                34,
-                0xFFA8B8C6);
+        graphics.fill(0, 0, width, height, 0xA805080D);
+
+        graphics.fill(panelLeft + 3, panelTop + 3,
+                panelLeft + panelWidth + 3, panelTop + panelHeight + 3,
+                0x66000000);
+        graphics.fill(panelLeft, panelTop,
+                panelLeft + panelWidth, panelTop + panelHeight,
+                0xE8121921);
+        graphics.fill(panelLeft, panelTop,
+                panelLeft + 4, panelTop + panelHeight,
+                0xFF55B9E8);
+        graphics.fill(panelLeft + 4, panelTop,
+                panelLeft + panelWidth, panelTop + 1,
+                0x554C6C80);
+
+        graphics.drawString(font, "COPYL", panelLeft + 20, panelTop + 16, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Mensajes rápidos", panelLeft + 20, panelTop + 30, 0xFF7E9EB2, false);
+
+        int configured = 0;
+        int assigned = 0;
+        MessageConfig messages = MessageConfig.getInstance();
+        for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
+            if (!messages.getMessage(i).isBlank()) configured++;
+            if (messages.getKeyCode(i) >= 0) assigned++;
+        }
+
+        String summary = configured + "/10 mensajes  •  " + assigned + " atajos";
+        graphics.drawString(font,
+                summary,
+                panelLeft + panelWidth - 20 - font.width(summary),
+                panelTop + 21,
+                0xFFA7D9EF,
+                false);
+
+        graphics.drawString(font,
+                "Todo se configura dentro de CopyL. No agrega teclas a Opciones > Controles.",
+                panelLeft + 20,
+                panelTop + 49,
+                0xFF9AABB8,
+                false);
+
+        super.render(graphics, mouseX, mouseY, partialTick);
 
         if (!feedback.isBlank() && System.currentTimeMillis() <= feedbackUntil) {
             graphics.drawCenteredString(font,
-                    font.plainSubstrByWidth(feedback, Math.max(100, width - 24)),
-                    cx,
-                    height - 16,
-                    0xFF8FD6FF);
+                    feedback,
+                    width / 2,
+                    panelTop + panelHeight - 15,
+                    0xFF86D6FA);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 
     @Override
