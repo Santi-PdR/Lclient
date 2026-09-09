@@ -26,5 +26,13 @@
   "screen.copyl.config_save_failed": "Could not save the opener shortcut; the previous one was kept.",
   "screen.copyl.conflict_save_failed": "The shortcut changed, but a slot conflict could not be cleared on disk.",
   "screen.copyl.open_removed": "Opener shortcut removed.",
-  "screen.copyl.open_updated": "Opener shortcut updated."
+  "screen.copyl.open_updated": "Opener shortcut updated.",
+  "screen.copyl.backup_copy": "Copy backup",
+  "screen.copyl.backup_import": "Import backup",
+  "screen.copyl.backup_copied": "Full backup copied to the clipboard.",
+  "screen.copyl.backup_copy_failed": "Could not copy the backup to the clipboard.",
+  "screen.copyl.backup_import_confirm": "Press Import backup again to replace the current configuration.",
+  "screen.copyl.backup_imported": "Backup imported and saved successfully.",
+  "screen.copyl.backup_invalid": "The clipboard does not contain a valid CopyL backup.",
+  "screen.copyl.backup_save_failed": "The backup is valid, but the configuration could not be saved."
 }
