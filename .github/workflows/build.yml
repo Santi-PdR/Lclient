@@ -11,9 +11,8 @@ permissions:
 
 concurrency:
   group: copyl-build-${{ github.workflow }}-${{ github.ref }}
-  # Keep one build per ref at a time, but never let a delayed event from an older
-  # commit cancel the build for the current HEAD. Stale runs are already prevented
-  # from publishing by the REMOTE_MAIN/GITHUB_SHA check below.
+  # Queue runs for the same ref instead of letting delayed events cancel the current HEAD.
+  # Stale main runs are still prevented from publishing by the REMOTE_MAIN/GITHUB_SHA check.
   cancel-in-progress: false
 
 jobs:
@@ -93,29 +92,42 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          PUBLISH_DIR="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$PUBLISH_DIR" >/dev/null 2>&1 || true
+            rm -rf "$PUBLISH_DIR" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
           if git ls-remote --exit-code --heads origin build-output >/dev/null 2>&1; then
-            git fetch origin build-output:build-output
-            git checkout build-output
+            git fetch origin build-output:refs/remotes/origin/build-output
+            git worktree add --detach "$PUBLISH_DIR" refs/remotes/origin/build-output
           else
-            git checkout --orphan build-output
-            git rm -rf . || true
+            git worktree add --detach "$PUBLISH_DIR" "$GITHUB_SHA"
+            (
+              cd "$PUBLISH_DIR"
+              git checkout --orphan build-output
+            )
           fi
+
+          cd "$PUBLISH_DIR"
+
+          # build-output must contain only the installer payload and metadata. Keeping it in a
+          # separate worktree prevents Gradle-generated files from ever contaminating the branch.
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 
           base64 -w 0 /tmp/copyl-latest.jar > copyl-latest.jar.b64
           printf '\n' >> copyl-latest.jar.b64
-          rm -f lclient-latest.jar.b64
           printf '%s\n' "$VERSION" > version.txt
           printf '%s\n' "$SHA256" > sha256.txt
           printf '%s\n' "$GITHUB_SHA" > source-commit.txt
 
-          # build-output only contains installer metadata/payload files, so stage the
-          # complete branch state. This also records deletion of any legacy payload
-          # without failing when that legacy file is already absent.
-          git add -A
+          git add -- copyl-latest.jar.b64 version.txt sha256.txt source-commit.txt
           if git diff --cached --quiet; then
             echo "Installer payload already matches this build."
             exit 0
           fi
 
           git commit -m "build: publish CopyL ${VERSION} [skip ci]"
-          git push origin build-output
+          git push origin HEAD:build-output

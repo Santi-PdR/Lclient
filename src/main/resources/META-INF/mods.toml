@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="copyl"
-version="3.2.0"
+version="3.3.0"
 displayName="CopyL"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
@@ -13,7 +13,7 @@ CopyL es un mod 100% client-side para Forge 1.20.1 dedicado exclusivamente a men
 
 Incluye 10 slots configurables con nombre, texto/comando y atajo propio. Los atajos pueden ser teclas o botones del mouse, se gestionan dentro de CopyL y no aparecen en Opciones > Controles.
 
-CopyL 3.2 mejora la seguridad de guardado y la interfaz: aplica los 10 slots de forma transaccional, conserva cambios abiertos si falla el disco, protege contra descartes accidentales y muestra estados visuales claros para mensajes, comandos y slots incompletos.
+CopyL 3.3 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
 
 El contenido se envía exactamente como fue escrito, sin variables ni placeholders. CopyL no incluye Loot ESP, Smart Offhand, Recon, HUD táctico, Notification Center ni integración con JourneyMap.
 '''

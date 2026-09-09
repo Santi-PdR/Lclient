@@ -1,5 +1,31 @@
 # Changelog
 
+## 3.3.0 — portable profiles + release hardening
+
+### Backup / restauración
+
+- Nuevo **backup completo por portapapeles** desde `Mods > CopyL > Config`.
+- El backup incluye atajo global y los 10 nombres, mensajes y atajos.
+- Formato JSON portable con identificador `copyl-profile` y esquema versionado.
+- La importación valida estructura, cantidad de slots y bindings antes de tocar la configuración.
+- `Importar backup` exige una segunda confirmación para evitar reemplazos accidentales.
+- Conflictos entre el atajo global y slots se limpian antes de persistir.
+- Si falla la persistencia, la interfaz informa el error en lugar de mostrar un éxito falso.
+
+### Interfaz / idiomas
+
+- La pantalla Config incorpora `Copiar backup` e `Importar backup` sin sacar los controles existentes.
+- Layout ajustado para mantener buen comportamiento con GUI Scale alto.
+- Nuevos mensajes de backup/restauración en inglés y todas las variantes de español incluidas por CopyL.
+
+### Build / deploy
+
+- `build-output` ahora se publica desde un **worktree aislado**.
+- La publicación limpia el árbol y deja únicamente `copyl-latest.jar.b64`, `version.txt`, `sha256.txt` y `source-commit.txt`.
+- Archivos generados por Gradle ya no pueden contaminar la rama de payload.
+- Los workflows de una misma ref se serializan sin cancelar el build del HEAD actual por eventos retrasados.
+- Se ignora explícitamente `gradle/wrapper/gradle-wrapper.jar` cuando el wrapper lo genera localmente.
+
 ## 3.2.0 — input + persistence hardening
 
 ### Atajos

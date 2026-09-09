@@ -3,6 +3,7 @@ package com.santipdr.copyl.client.screen;
 import com.santipdr.copyl.client.CopyLBinding;
 import com.santipdr.copyl.client.CopyLConfig;
 import com.santipdr.copyl.client.CopyLKeyMappings;
+import com.santipdr.copyl.client.CopyLProfileCodec;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -12,12 +13,15 @@ import org.lwjgl.glfw.GLFW;
 
 /** Polished Mods > CopyL > Config surface. */
 public final class CopyLSettingsScreen extends Screen {
+    private static final long IMPORT_CONFIRM_MS = 4000L;
+
     private final Screen parent;
     private Button bindingButton;
     private boolean capturing;
     private Component feedback = Component.empty();
     private int feedbackColor = 0xFF86D6FA;
     private long feedbackUntil;
+    private long importConfirmUntil;
     private int panelLeft;
     private int panelTop;
     private int panelWidth;
@@ -31,14 +35,14 @@ public final class CopyLSettingsScreen extends Screen {
     @Override
     protected void init() {
         panelWidth = Math.min(440, Math.max(220, width - 24));
-        panelHeight = Math.min(205, Math.max(168, height - 40));
+        panelHeight = Math.min(220, Math.max(174, height - 16));
         panelLeft = (width - panelWidth) / 2;
-        panelTop = Math.max(20, (height - panelHeight) / 2);
+        panelTop = Math.max(8, (height - panelHeight) / 2);
 
         int innerLeft = panelLeft + 20;
         int innerWidth = panelWidth - 40;
         int buttonHeight = 20;
-        int firstY = panelTop + 80;
+        int firstY = panelTop + 66;
 
         bindingButton = addRenderableWidget(Button.builder(bindingLabel(), b -> {
             capturing = true;
@@ -48,10 +52,17 @@ public final class CopyLSettingsScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.translatable("screen.copyl.edit_messages"), b -> {
             if (minecraft != null) minecraft.setScreen(new MessageEditorScreen(this));
-        }).bounds(innerLeft, firstY + 27, innerWidth, buttonHeight).build());
+        }).bounds(innerLeft, firstY + 25, innerWidth, buttonHeight).build());
+
+        int gap = 6;
+        int half = (innerWidth - gap) / 2;
+        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.backup_copy"), b -> copyBackup())
+                .bounds(innerLeft, firstY + 50, half, buttonHeight).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.backup_import"), b -> importBackup())
+                .bounds(innerLeft + half + gap, firstY + 50, innerWidth - half - gap, buttonHeight).build());
 
         addRenderableWidget(Button.builder(Component.translatable("screen.copyl.back"), b -> onClose())
-                .bounds(innerLeft, firstY + 54, innerWidth, buttonHeight).build());
+                .bounds(innerLeft, firstY + 75, innerWidth, buttonHeight).build());
     }
 
     private Component bindingLabel() {
@@ -111,10 +122,51 @@ public final class CopyLSettingsScreen extends Screen {
         }
     }
 
+    private void copyBackup() {
+        if (minecraft == null) return;
+        try {
+            minecraft.keyboardHandler.setClipboard(CopyLProfileCodec.exportProfile());
+            importConfirmUntil = 0L;
+            showFeedback(Component.translatable("screen.copyl.backup_copied"), 0xFF86D6FA);
+        } catch (Exception exception) {
+            showFeedback(Component.translatable("screen.copyl.backup_copy_failed"), 0xFFFF7777);
+        }
+    }
+
+    private void importBackup() {
+        if (minecraft == null) return;
+
+        long now = System.currentTimeMillis();
+        if (now > importConfirmUntil) {
+            importConfirmUntil = now + IMPORT_CONFIRM_MS;
+            showFeedback(Component.translatable("screen.copyl.backup_import_confirm"), 0xFFFFB777);
+            return;
+        }
+        importConfirmUntil = 0L;
+
+        String clipboard;
+        try {
+            clipboard = minecraft.keyboardHandler.getClipboard();
+        } catch (Exception exception) {
+            showFeedback(Component.translatable("screen.copyl.backup_invalid"), 0xFFFF7777);
+            return;
+        }
+
+        CopyLProfileCodec.ImportResult result = CopyLProfileCodec.importProfile(clipboard);
+        if (result == CopyLProfileCodec.ImportResult.SUCCESS) {
+            bindingButton.setMessage(bindingLabel());
+            showFeedback(Component.translatable("screen.copyl.backup_imported"), 0xFF86D6FA);
+        } else if (result == CopyLProfileCodec.ImportResult.INVALID) {
+            showFeedback(Component.translatable("screen.copyl.backup_invalid"), 0xFFFF7777);
+        } else {
+            showFeedback(Component.translatable("screen.copyl.backup_save_failed"), 0xFFFF7777);
+        }
+    }
+
     private void showFeedback(Component text, int color) {
         feedback = text;
         feedbackColor = color;
-        feedbackUntil = System.currentTimeMillis() + 3000L;
+        feedbackUntil = System.currentTimeMillis() + 3500L;
     }
 
     @Override
@@ -135,11 +187,11 @@ public final class CopyLSettingsScreen extends Screen {
                 panelLeft + panelWidth, panelTop + 1,
                 0x665E859B);
 
-        graphics.drawString(font, "COPYL", panelLeft + 20, panelTop + 14, 0xFFFFFFFF, false);
+        graphics.drawString(font, "COPYL", panelLeft + 20, panelTop + 12, 0xFFFFFFFF, false);
         graphics.drawString(font,
                 Component.translatable("screen.copyl.header_subtitle"),
                 panelLeft + 20,
-                panelTop + 28,
+                panelTop + 26,
                 0xFF7E9EB2,
                 false);
 
@@ -155,14 +207,14 @@ public final class CopyLSettingsScreen extends Screen {
         graphics.drawString(font,
                 summary,
                 panelLeft + 20,
-                panelTop + 46,
+                panelTop + 43,
                 0xFFA7D9EF,
                 false);
 
         String hint = font.plainSubstrByWidth(
                 Component.translatable("screen.copyl.config_hint").getString(),
                 Math.max(80, panelWidth - 40));
-        graphics.drawString(font, hint, panelLeft + 20, panelTop + 59, 0xFF9AABB8, false);
+        graphics.drawString(font, hint, panelLeft + 20, panelTop + 54, 0xFF9AABB8, false);
 
         super.render(graphics, mouseX, mouseY, partialTick);
 
@@ -171,7 +223,7 @@ public final class CopyLSettingsScreen extends Screen {
             graphics.drawCenteredString(font,
                     clipped,
                     width / 2,
-                    panelTop + panelHeight - 13,
+                    panelTop + panelHeight - 12,
                     feedbackColor);
         }
     }
@@ -184,6 +236,7 @@ public final class CopyLSettingsScreen extends Screen {
     @Override
     public void onClose() {
         capturing = false;
+        importConfirmUntil = 0L;
         if (minecraft != null) minecraft.setScreen(parent);
     }
 }

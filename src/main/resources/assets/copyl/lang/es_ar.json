@@ -26,5 +26,13 @@
   "screen.copyl.config_save_failed": "No se pudo guardar la tecla de apertura; se conservó la anterior.",
   "screen.copyl.conflict_save_failed": "La tecla cambió, pero no se pudo limpiar un conflicto de slot en disco.",
   "screen.copyl.open_removed": "Atajo de apertura eliminado.",
-  "screen.copyl.open_updated": "Atajo de apertura actualizado."
+  "screen.copyl.open_updated": "Atajo de apertura actualizado.",
+  "screen.copyl.backup_copy": "Copiar backup",
+  "screen.copyl.backup_import": "Importar backup",
+  "screen.copyl.backup_copied": "Backup completo copiado al portapapeles.",
+  "screen.copyl.backup_copy_failed": "No se pudo copiar el backup al portapapeles.",
+  "screen.copyl.backup_import_confirm": "Pulsa Importar backup otra vez para reemplazar la configuración actual.",
+  "screen.copyl.backup_imported": "Backup importado y guardado correctamente.",
+  "screen.copyl.backup_invalid": "El portapapeles no contiene un backup válido de CopyL.",
+  "screen.copyl.backup_save_failed": "El backup es válido, pero no se pudo guardar la configuración."
 }
