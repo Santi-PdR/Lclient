@@ -1,8 +1,8 @@
 package com.santipdr.copyl.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.santipdr.copyl.client.CopyLConfig;
 import com.santipdr.copyl.client.CopyLKeyMappings;
-import com.santipdr.copyl.client.LClientConfig;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -35,7 +35,7 @@ public final class MessageEditorScreen extends Screen {
     private long warningUntil;
 
     public MessageEditorScreen(Screen parent) {
-        super(Component.literal("Lclient — CopyL"));
+        super(Component.literal("CopyL — Mensajes rápidos"));
         this.parent = parent;
 
         MessageConfig config = MessageConfig.getInstance();
@@ -164,7 +164,7 @@ public final class MessageEditorScreen extends Screen {
             }).bounds(width / 2 + 34, pagerY, 28, 16).build());
             next.active = page < maxPage;
         } else {
-            addRenderableWidget(Button.builder(Component.literal("Ver variables tácticas"), b -> openVariables())
+            addRenderableWidget(Button.builder(Component.literal("Ver variables"), b -> openVariables())
                     .bounds(width / 2 - 74, 59, 148, 16).build());
         }
 
@@ -219,7 +219,7 @@ public final class MessageEditorScreen extends Screen {
                 draftKeys[bindingIndex] = -1;
                 bindingIndex = -1;
             } else if (isReservedKey(keyCode)) {
-                showWarning("Esa tecla está reservada por Lclient (ruleta, Loot ESP o Recon).");
+                showWarning("Esa tecla está reservada para abrir CopyL.");
                 bindingIndex = -1;
             } else {
                 assignDraftKey(bindingIndex, keyCode);
@@ -245,11 +245,7 @@ public final class MessageEditorScreen extends Screen {
     }
 
     private boolean isReservedKey(int keyCode) {
-        LClientConfig c = LClientConfig.get();
-        return keyCode == c.wheelKey
-                || keyCode == c.lootEspToggleKey
-                || keyCode == c.reconZoomKey
-                || keyCode == c.reconWaypointKey;
+        return keyCode == CopyLConfig.get().openKey;
     }
 
     private void showWarning(String text) {
@@ -303,7 +299,7 @@ public final class MessageEditorScreen extends Screen {
                     28,
                     0xFFAAB7C4);
             graphics.drawCenteredString(font,
-                    "Variables de jugador + objetivo + telemetría disponibles dentro del editor.",
+                    "Variables de jugador y del objetivo actual disponibles dentro del editor.",
                     width / 2,
                     43,
                     0xFF7F93A6);

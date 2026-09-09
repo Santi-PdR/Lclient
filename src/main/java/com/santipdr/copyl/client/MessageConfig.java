@@ -85,7 +85,7 @@ public final class MessageConfig {
             ConfigData data = new ConfigData(names.clone(), messages.clone(), keyCodes.clone());
             AtomicConfigIO.write(CONFIG_PATH, GSON.toJson(data));
         } catch (Exception exception) {
-            System.err.println("[Lclient/CopyL] No se pudo guardar " + CONFIG_PATH + ": " + exception.getMessage());
+            System.err.println("[CopyL] No se pudo guardar " + CONFIG_PATH + ": " + exception.getMessage());
         }
     }
 
@@ -137,25 +137,22 @@ public final class MessageConfig {
                 keyCodes[i] = key;
             }
 
-            if (clearReservedConflicts(LClientConfig.get())) repaired = true;
+            if (clearReservedConflict(CopyLConfig.get().openKey)) repaired = true;
             if (repaired) writeCurrentState();
         } catch (Exception exception) {
             Path backup = AtomicConfigIO.backupBroken(CONFIG_PATH);
-            System.err.println("[Lclient/CopyL] No se pudo leer " + CONFIG_PATH + ": " + exception.getMessage()
+            System.err.println("[CopyL] No se pudo leer " + CONFIG_PATH + ": " + exception.getMessage()
                     + (backup == null ? "" : " · copia: " + backup));
             resetDefaults();
             writeCurrentState();
         }
     }
 
-    private boolean clearReservedConflicts(LClientConfig config) {
+    private boolean clearReservedConflict(int openKey) {
+        if (openKey < 0) return false;
         boolean changed = false;
         for (int i = 0; i < keyCodes.length; i++) {
-            int key = keyCodes[i];
-            if (key >= 0 && (key == config.wheelKey
-                    || key == config.lootEspToggleKey
-                    || key == config.reconZoomKey
-                    || key == config.reconWaypointKey)) {
+            if (keyCodes[i] == openKey) {
                 keyCodes[i] = -1;
                 changed = true;
             }
@@ -185,10 +182,6 @@ public final class MessageConfig {
         return truncateUtf16Safely(cleaned, MAX_NAME_LENGTH);
     }
 
-    /**
-     * Configs can be edited outside Minecraft. Strip control characters and
-     * repair isolated UTF-16 surrogates before text reaches chat/render code.
-     */
     private static String cleanSingleLine(String value) {
         if (value == null || value.isEmpty()) return "";
         StringBuilder out = new StringBuilder(value.length());
