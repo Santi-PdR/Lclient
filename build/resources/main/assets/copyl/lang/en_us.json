@@ -1,0 +1,9 @@
+{
+  "key.categories.copyl": "CopyL — Quick messages",
+  "screen.copyl.title": "CopyL — Quick messages",
+  "screen.copyl.subtitle": "Save up to 10 messages or commands and send them instantly with a key.",
+  "screen.copyl.placeholder": "Write a message or /command...",
+  "screen.copyl.save": "Save changes",
+  "screen.copyl.cancel": "Cancel",
+  "screen.copyl.key.waiting": "PRESS KEY"
+}
