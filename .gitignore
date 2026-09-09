@@ -8,3 +8,4 @@ run/
 *.iws
 logs/
 crash-reports/
+/gradle/wrapper/gradle-wrapper.jar
