@@ -11,7 +11,10 @@ permissions:
 
 concurrency:
   group: copyl-build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Keep one build per ref at a time, but never let a delayed event from an older
+  # commit cancel the build for the current HEAD. Stale runs are already prevented
+  # from publishing by the REMOTE_MAIN/GITHUB_SHA check below.
+  cancel-in-progress: false
 
 jobs:
   build:
