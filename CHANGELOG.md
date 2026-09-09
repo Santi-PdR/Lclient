@@ -1,8 +1,26 @@
 # Changelog
 
-## 3.0.0 — CopyL-only reset
+## 3.1.0 — visual refresh + literal messages
 
-El proyecto vuelve a ser exclusivamente CopyL.
+### Eliminado
+
+- Sistema completo de variables/placeholders.
+- Lectura de coordenadas, vida, hambre, orientación y datos del objetivo para mensajes.
+- `CopyLVariablesScreen` y todos los botones/textos relacionados con variables.
+
+Los slots ahora envían exactamente el texto o comando que el usuario escribió.
+
+### Apariencia
+
+- Editor rediseñado con tarjetas visuales por slot.
+- Numeración `01–10` y acento visual para distinguir slots configurados.
+- Nombre, tecla y mensaje agrupados de forma más clara.
+- Encabezado con cantidad de slots configurados y atajos asignados.
+- Diseño de dos columnas en resoluciones amplias.
+- Paginación responsive en resoluciones pequeñas.
+- Mejor fondo, jerarquía visual y separación entre contenido/acciones.
+- Config general rediseñada como panel compacto con resumen de estado.
+- Mejor integración con GUI Scale alto.
 
 ### Conservado
 
@@ -11,12 +29,14 @@ El proyecto vuelve a ser exclusivamente CopyL.
 - Tecla independiente por slot.
 - Tecla global para abrir el editor.
 - Teclas raw, sin entradas en `Opciones > Controles`.
-- Editor transaccional y responsive.
+- Guardado transaccional.
 - `Ctrl+Enter` para guardar.
 - Configuración atómica y recuperación de JSON corruptos.
-- Variables del jugador.
-- Variables del objetivo bajo la mira vanilla.
 - Migración de la antigua tecla de apertura desde `lclient.json`.
+
+## 3.0.0 — CopyL-only reset
+
+El proyecto volvió a ser exclusivamente CopyL.
 
 ### Eliminado completamente
 
@@ -35,17 +55,7 @@ El proyecto vuelve a ser exclusivamente CopyL.
 
 ### Identidad y build
 
-- `modId` vuelve a ser `copyl`.
+- `modId` volvió a ser `copyl`.
 - Display name: `CopyL`.
 - Proyecto Gradle: `CopyL`.
-- JAR: `copyl-3.0.0.jar`.
-- Artifact de CI: `CopyL-3.0.0`.
 - Publicación en `build-output`: `copyl-latest.jar.b64`.
-- El workflow elimina el payload heredado `lclient-latest.jar.b64` al publicar 3.x en `main`.
-
-### Migración
-
-- `config/lclient.json` se usa una sola vez como fuente de migración cuando no existe `config/copyl.json`.
-- La antigua `wheelKey` se convierte en `openKey`.
-- Tras una migración correcta se elimina `lclient.json`.
-- `copyl-messages.json` se conserva para no perder los mensajes ni sus teclas.
