@@ -21,9 +21,9 @@ public final class MessageEditorScreen extends Screen {
     private static final long DISCARD_CONFIRM_MS = 3500L;
 
     private final Screen parent;
-    private final DispatchEditBox[] nameFields = new EditBox[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchEditBox[] nameFields = new DispatchEditBox[CopyLKeyMappings.SLOT_COUNT];
     private final DispatchEditBox[] messageFields = new EditBox[CopyLKeyMappings.SLOT_COUNT];
-    private final DispatchButton[] bindingButtons = new Button[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchButton[] bindingButtons = new DispatchButton[CopyLKeyMappings.SLOT_COUNT];
 
     private final String[] draftNames;
     private final String[] draftMessages;
