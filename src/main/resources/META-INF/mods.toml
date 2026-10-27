@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="copyl"
-version="3.5.0"
+version="3.6.0"
 displayName="CEDA Dispatch"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
@@ -13,7 +13,7 @@ CEDA Dispatch (CopyL) es un mod 100% client-side para Forge 1.20.1 dedicado excl
 
 Incluye 10 slots configurables con nombre, texto/comando y atajo propio. Los atajos pueden ser teclas o botones del mouse, se gestionan dentro de CopyL y no aparecen en Opciones > Controles.
 
-CEDA Dispatch 3.5 adapta las pantallas de ajustes y edición a ventanas pequeñas y escalas de GUI altas. Conserva el backup/restauración completa por portapapeles añadido en 3.4, con validación de formato, confirmación antes de importar y persistencia segura. La versión 3.4 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
+CEDA Dispatch 3.6 mejora el acabado visual de las pantallas con controles propios de papel e tinta sin sombra pesada. Se conserva el ajuste para ventanas pequeñas de la versión 3.5 y el backup/restauración completa por portapapeles de la versión 3.4. El texto escrito y las etiquetas se dibujan sin sombra para mantener una lectura clara. las pantallas de ajustes y edición a ventanas pequeñas y escalas de GUI altas. Conserva el backup/restauración completa por portapapeles añadido en 3.4, con validación de formato, confirmación antes de importar y persistencia segura. La versión 3.4 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
 
 El contenido se envía exactamente como fue escrito, sin variables ni placeholders. CopyL no incluye Loot ESP, Smart Offhand, Recon, HUD táctico, Notification Center ni integración con JourneyMap.
 '''

@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.0 — Clean ink, clear controls
+
+- Replace the default grey controls with paper, sepia ink, and Ghoul teal buttons; give the main action a clear visual priority.
+- Draw button labels, page marks, slot labels, and editable text without the heavy default drop shadow.
+- Preserve normal text entry, cursor placement, selection, and horizontal scrolling while keeping the menu static.
+
 ## 3.5.0 — compact field desk
 
 - Fit the settings panel to the available window and keep its backup actions usable in compact layouts.

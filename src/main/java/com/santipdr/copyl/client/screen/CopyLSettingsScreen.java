@@ -6,7 +6,7 @@ import com.santipdr.copyl.client.CopyLKeyMappings;
 import com.santipdr.copyl.client.CopyLProfileCodec;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -17,7 +17,7 @@ public final class CopyLSettingsScreen extends Screen {
     private static final long IMPORT_CONFIRM_MS = 4000L;
 
     private final Screen parent;
-    private Button bindingButton;
+    private DispatchButton bindingButton;
     private boolean capturing;
     private Component feedback = Component.empty();
     private int feedbackColor = DispatchPalette.SUCCESS;
@@ -50,15 +50,17 @@ public final class CopyLSettingsScreen extends Screen {
         int rowStep = buttonHeight + (compactLayout ? 4 : 5);
         int firstY = panelTop + (compactLayout ? 28 : 66);
 
-        bindingButton = addRenderableWidget(Button.builder(bindingLabel(), b -> {
-            capturing = true;
-            feedback = Component.empty();
-            b.setMessage(Component.translatable("screen.copyl.press_binding"));
-        }).bounds(innerLeft, firstY, innerWidth, buttonHeight).build());
+        bindingButton = addRenderableWidget(new DispatchButton(innerLeft, firstY, innerWidth, buttonHeight,
+                bindingLabel(), b -> {
+                    capturing = true;
+                    feedback = Component.empty();
+                    b.setMessage(Component.translatable("screen.copyl.press_binding"));
+                }, DispatchButton.Style.SECONDARY));
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.edit_messages"), b -> {
-            if (minecraft != null) minecraft.setScreen(new MessageEditorScreen(this));
-        }).bounds(innerLeft, firstY + rowStep, innerWidth, buttonHeight).build());
+        addRenderableWidget(new DispatchButton(innerLeft, firstY + rowStep, innerWidth, buttonHeight,
+                Component.translatable("screen.copyl.edit_messages"),
+                () -> { if (minecraft != null) minecraft.setScreen(new MessageEditorScreen(this)); },
+                DispatchButton.Style.PRIMARY));
 
         int gap = compactLayout ? 4 : 6;
         int half = Math.max(1, (innerWidth - gap) / 2);
@@ -66,18 +68,19 @@ public final class CopyLSettingsScreen extends Screen {
                 ? "screen.copyl.backup_copy_short" : "screen.copyl.backup_copy");
         Component importLabel = Component.translatable(compactLayout
                 ? "screen.copyl.backup_import_short" : "screen.copyl.backup_import");
-        Button copyButton = addRenderableWidget(Button.builder(copyLabel, b -> copyBackup())
-                .bounds(innerLeft, firstY + rowStep * 2, half, buttonHeight).build());
-        Button importButton = addRenderableWidget(Button.builder(importLabel, b -> importBackup())
-                .bounds(innerLeft + half + gap, firstY + rowStep * 2,
-                        Math.max(1, innerWidth - half - gap), buttonHeight).build());
+        DispatchButton copyButton = addRenderableWidget(new DispatchButton(innerLeft,
+                firstY + rowStep * 2, half, buttonHeight, copyLabel,
+                this::copyBackup, DispatchButton.Style.SECONDARY));
+        DispatchButton importButton = addRenderableWidget(new DispatchButton(innerLeft + half + gap,
+                firstY + rowStep * 2, Math.max(1, innerWidth - half - gap), buttonHeight,
+                importLabel, this::importBackup, DispatchButton.Style.SECONDARY));
         if (compactLayout) {
             copyButton.setTooltip(Tooltip.create(Component.translatable("screen.copyl.backup_copy")));
             importButton.setTooltip(Tooltip.create(Component.translatable("screen.copyl.backup_import")));
         }
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.back"), b -> onClose())
-                .bounds(innerLeft, firstY + rowStep * 3, innerWidth, buttonHeight).build());
+        addRenderableWidget(new DispatchButton(innerLeft, firstY + rowStep * 3, innerWidth, buttonHeight,
+                Component.translatable("screen.copyl.back"), this::onClose, DispatchButton.Style.SECONDARY));
     }
 
     private Component bindingLabel() {
@@ -240,7 +243,7 @@ public final class CopyLSettingsScreen extends Screen {
 
         if (feedbackVisible && !compactLayout) {
             String clipped = font.plainSubstrByWidth(feedback.getString(), Math.max(80, panelWidth - 30));
-            graphics.drawCenteredString(font, clipped, width / 2,
+            DispatchText.drawCentered(graphics, font, clipped, width / 2,
                     panelTop + panelHeight - 12, feedbackColor);
         }
     }
