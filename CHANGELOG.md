@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.0 — CEDA dispatch paper
+
+- Rename the visible mod and settings-screen header to CEDA Dispatch while retaining the copyl mod ID, Java package, JSON schema, and config paths.
+- Restyle the settings and message editor around static parchment, sepia ink, and restrained Ghoul teal accents.
+- Add an optional, quiet shortcut from GripeVerde's title screen when both mods are installed; no required dependency is added.
+
 ## 3.3.0 — portable profiles + release hardening
 
 ### Backup / restauración

@@ -1,14 +1,14 @@
-# CopyL
+# CEDA Dispatch (CopyL)
 
-CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
+CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CopyL 3.3.0
+## CEDA Dispatch 3.4.0
 
-CopyL 3.3 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
+CEDA Dispatch 3.4 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
 
 ### Qué hace
 
-CopyL ofrece **10 slots** independientes. Cada slot tiene:
+CEDA Dispatch ofrece **10 slots** independientes. Cada slot tiene:
 
 - nombre;
 - mensaje o comando;
@@ -29,9 +29,13 @@ La tecla global y los 10 slots aceptan:
 
 La tecla de apertura por defecto es `Alt derecho` y se cambia desde:
 
-`Mods > CopyL > Config`
+`Mods > CEDA Dispatch > Config`
 
 Si un atajo ya pertenece a otro slot, al reasignarlo se mueve al slot nuevo. La tecla usada para abrir CopyL queda reservada y no puede activar un mensaje al mismo tiempo.
+
+## Integración con GripeVerde
+
+Cuando ambos mods están instalados, un pequeño botón con icono de parte CEDA en la portada de GripeVerde abre esta configuración. No se agrega una dependencia obligatoria ni cambia el comportamiento si CEDA Dispatch está ausente.
 
 ## Editor
 

@@ -19,7 +19,7 @@ public final class CopyLSettingsScreen extends Screen {
     private Button bindingButton;
     private boolean capturing;
     private Component feedback = Component.empty();
-    private int feedbackColor = 0xFF86D6FA;
+    private int feedbackColor = DispatchPalette.SUCCESS;
     private long feedbackUntil;
     private long importConfirmUntil;
     private int panelLeft;
@@ -105,7 +105,7 @@ public final class CopyLSettingsScreen extends Screen {
             config.openKey = oldBinding;
             capturing = false;
             bindingButton.setMessage(bindingLabel());
-            showFeedback(Component.translatable("screen.copyl.config_save_failed"), 0xFFFF7777);
+            showFeedback(Component.translatable("screen.copyl.config_save_failed"), DispatchPalette.ERROR);
             return;
         }
 
@@ -114,11 +114,11 @@ public final class CopyLSettingsScreen extends Screen {
         bindingButton.setMessage(bindingLabel());
 
         if (!conflictsCleared) {
-            showFeedback(Component.translatable("screen.copyl.conflict_save_failed"), 0xFFFFB777);
+            showFeedback(Component.translatable("screen.copyl.conflict_save_failed"), DispatchPalette.WARNING);
         } else if (newBinding < 0) {
-            showFeedback(Component.translatable("screen.copyl.open_removed"), 0xFF86D6FA);
+            showFeedback(Component.translatable("screen.copyl.open_removed"), DispatchPalette.SUCCESS);
         } else {
-            showFeedback(Component.translatable("screen.copyl.open_updated"), 0xFF86D6FA);
+            showFeedback(Component.translatable("screen.copyl.open_updated"), DispatchPalette.SUCCESS);
         }
     }
 
@@ -127,9 +127,9 @@ public final class CopyLSettingsScreen extends Screen {
         try {
             minecraft.keyboardHandler.setClipboard(CopyLProfileCodec.exportProfile());
             importConfirmUntil = 0L;
-            showFeedback(Component.translatable("screen.copyl.backup_copied"), 0xFF86D6FA);
+            showFeedback(Component.translatable("screen.copyl.backup_copied"), DispatchPalette.SUCCESS);
         } catch (Exception exception) {
-            showFeedback(Component.translatable("screen.copyl.backup_copy_failed"), 0xFFFF7777);
+            showFeedback(Component.translatable("screen.copyl.backup_copy_failed"), DispatchPalette.ERROR);
         }
     }
 
@@ -139,7 +139,7 @@ public final class CopyLSettingsScreen extends Screen {
         long now = System.currentTimeMillis();
         if (now > importConfirmUntil) {
             importConfirmUntil = now + IMPORT_CONFIRM_MS;
-            showFeedback(Component.translatable("screen.copyl.backup_import_confirm"), 0xFFFFB777);
+            showFeedback(Component.translatable("screen.copyl.backup_import_confirm"), DispatchPalette.WARNING);
             return;
         }
         importConfirmUntil = 0L;
@@ -148,18 +148,18 @@ public final class CopyLSettingsScreen extends Screen {
         try {
             clipboard = minecraft.keyboardHandler.getClipboard();
         } catch (Exception exception) {
-            showFeedback(Component.translatable("screen.copyl.backup_invalid"), 0xFFFF7777);
+            showFeedback(Component.translatable("screen.copyl.backup_invalid"), DispatchPalette.ERROR);
             return;
         }
 
         CopyLProfileCodec.ImportResult result = CopyLProfileCodec.importProfile(clipboard);
         if (result == CopyLProfileCodec.ImportResult.SUCCESS) {
             bindingButton.setMessage(bindingLabel());
-            showFeedback(Component.translatable("screen.copyl.backup_imported"), 0xFF86D6FA);
+            showFeedback(Component.translatable("screen.copyl.backup_imported"), DispatchPalette.SUCCESS);
         } else if (result == CopyLProfileCodec.ImportResult.INVALID) {
-            showFeedback(Component.translatable("screen.copyl.backup_invalid"), 0xFFFF7777);
+            showFeedback(Component.translatable("screen.copyl.backup_invalid"), DispatchPalette.ERROR);
         } else {
-            showFeedback(Component.translatable("screen.copyl.backup_save_failed"), 0xFFFF7777);
+            showFeedback(Component.translatable("screen.copyl.backup_save_failed"), DispatchPalette.ERROR);
         }
     }
 
@@ -172,27 +172,27 @@ public final class CopyLSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-        graphics.fill(0, 0, width, height, 0xA805080D);
+        graphics.fill(0, 0, width, height, DispatchPalette.NIGHT);
 
         graphics.fill(panelLeft + 3, panelTop + 3,
                 panelLeft + panelWidth + 3, panelTop + panelHeight + 3,
-                0x66000000);
+                DispatchPalette.PANEL_SHADOW);
         graphics.fill(panelLeft, panelTop,
                 panelLeft + panelWidth, panelTop + panelHeight,
-                0xEA121921);
+                DispatchPalette.PAPER);
         graphics.fill(panelLeft, panelTop,
                 panelLeft + 4, panelTop + panelHeight,
-                0xFF55B9E8);
+                DispatchPalette.BLOOD);
         graphics.fill(panelLeft + 4, panelTop,
                 panelLeft + panelWidth, panelTop + 1,
-                0x665E859B);
+                DispatchPalette.PAPER_RULE);
 
-        graphics.drawString(font, "COPYL", panelLeft + 20, panelTop + 12, 0xFFFFFFFF, false);
+        graphics.drawString(font, Component.translatable("screen.copyl.brand"), panelLeft + 20, panelTop + 12, DispatchPalette.INK, false);
         graphics.drawString(font,
                 Component.translatable("screen.copyl.header_subtitle"),
                 panelLeft + 20,
                 panelTop + 26,
-                0xFF7E9EB2,
+                DispatchPalette.INK_MUTED,
                 false);
 
         int configured = 0;
@@ -208,13 +208,13 @@ public final class CopyLSettingsScreen extends Screen {
                 summary,
                 panelLeft + 20,
                 panelTop + 43,
-                0xFFA7D9EF,
+                DispatchPalette.GHOUL_TEAL,
                 false);
 
         String hint = font.plainSubstrByWidth(
                 Component.translatable("screen.copyl.config_hint").getString(),
                 Math.max(80, panelWidth - 40));
-        graphics.drawString(font, hint, panelLeft + 20, panelTop + 54, 0xFF9AABB8, false);
+        graphics.drawString(font, hint, panelLeft + 20, panelTop + 54, DispatchPalette.INK_MUTED, false);
 
         super.render(graphics, mouseX, mouseY, partialTick);
 

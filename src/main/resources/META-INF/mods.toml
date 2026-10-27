@@ -4,16 +4,16 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="copyl"
-version="3.3.0"
-displayName="CopyL"
+version="3.4.0"
+displayName="CEDA Dispatch"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
-CopyL es un mod 100% client-side para Forge 1.20.1 dedicado exclusivamente a mensajes y comandos rápidos.
+CEDA Dispatch (CopyL) es un mod 100% client-side para Forge 1.20.1 dedicado exclusivamente a mensajes y comandos rápidos.
 
 Incluye 10 slots configurables con nombre, texto/comando y atajo propio. Los atajos pueden ser teclas o botones del mouse, se gestionan dentro de CopyL y no aparecen en Opciones > Controles.
 
-CopyL 3.3 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
+CEDA Dispatch 3.4 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
 
 El contenido se envía exactamente como fue escrito, sin variables ni placeholders. CopyL no incluye Loot ESP, Smart Offhand, Recon, HUD táctico, Notification Center ni integración con JourneyMap.
 '''

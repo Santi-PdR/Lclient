@@ -1,7 +1,7 @@
 {
-  "key.categories.copyl": "CopyL — Mensajes rápidos",
-  "screen.copyl.title": "CopyL — Mensajes rápidos",
-  "screen.copyl.header_subtitle": "MENSAJES RÁPIDOS",
+  "key.categories.copyl": "CEDA Dispatch — Mensajes rápidos",
+  "screen.copyl.title": "CEDA Dispatch — Mensajes rápidos",
+  "screen.copyl.header_subtitle": "MENSAJES DE CAMPO",
   "screen.copyl.subtitle": "Guarda hasta 10 mensajes o comandos y envíalos al instante con un atajo.",
   "screen.copyl.name_hint": "Nombre",
   "screen.copyl.message_hint": "Mensaje o /comando...",
@@ -11,14 +11,14 @@
   "screen.copyl.cancel": "Cancelar",
   "screen.copyl.back": "Volver",
   "screen.copyl.edit_messages": "Editar mensajes",
-  "screen.copyl.open_binding": "Abrir CopyL  •  %s",
+  "screen.copyl.open_binding": "Abrir CEDA Dispatch  •  %s",
   "screen.copyl.unbound": "Sin atajo",
   "screen.copyl.press_binding": "PULSA TECLA / MOUSE",
   "screen.copyl.mouse_button": "Mouse %s",
   "screen.copyl.editor_summary": "%s/10 mensajes  •  %s atajos",
   "screen.copyl.page": "Página %s/%s",
-  "screen.copyl.config_hint": "Teclado y mouse se configuran aquí; CopyL no agrega entradas a Opciones > Controles.",
-  "screen.copyl.binding_reserved": "Ese atajo está reservado para abrir CopyL.",
+  "screen.copyl.config_hint": "Teclado y mouse se configuran aquí; CEDA Dispatch no agrega entradas a Opciones > Controles.",
+  "screen.copyl.binding_reserved": "Ese atajo está reservado para abrir CEDA Dispatch.",
   "screen.copyl.binding_moved": "Atajo movido del slot %s al slot %s.",
   "screen.copyl.slot_cleared": "Slot %s limpiado.",
   "screen.copyl.save_failed": "No se pudo guardar. Tus cambios siguen abiertos para que puedas reintentar.",
@@ -33,6 +33,7 @@
   "screen.copyl.backup_copy_failed": "No se pudo copiar el backup al portapapeles.",
   "screen.copyl.backup_import_confirm": "Pulsa Importar backup otra vez para reemplazar la configuración actual.",
   "screen.copyl.backup_imported": "Backup importado y guardado correctamente.",
-  "screen.copyl.backup_invalid": "El portapapeles no contiene un backup válido de CopyL.",
-  "screen.copyl.backup_save_failed": "El backup es válido, pero no se pudo guardar la configuración."
+  "screen.copyl.backup_invalid": "El portapapeles no contiene un backup válido de CEDA Dispatch.",
+  "screen.copyl.backup_save_failed": "El backup es válido, pero no se pudo guardar la configuración.",
+  "screen.copyl.brand": "CEDA DISPATCH"
 }
