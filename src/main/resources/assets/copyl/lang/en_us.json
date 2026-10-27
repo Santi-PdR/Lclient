@@ -35,5 +35,7 @@
   "screen.copyl.backup_imported": "Backup imported and saved successfully.",
   "screen.copyl.backup_invalid": "The clipboard does not contain a valid CEDA Dispatch backup.",
   "screen.copyl.backup_save_failed": "The backup is valid, but the configuration could not be saved.",
-  "screen.copyl.brand": "CEDA DISPATCH"
+  "screen.copyl.brand": "CEDA DISPATCH",
+  "screen.copyl.backup_copy_short": "Copy",
+  "screen.copyl.backup_import_short": "Load"
 }

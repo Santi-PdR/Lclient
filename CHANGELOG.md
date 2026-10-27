@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.0 — compact field desk
+
+- Fit the settings panel to the available window and keep its backup actions usable in compact layouts.
+- Paginate the message editor by the rows that actually fit; keep save and cancel below the visible cards, including short and narrow windows.
+
 ## 3.4.0 — CEDA dispatch paper
 
 - Rename the visible mod and settings-screen header to CEDA Dispatch while retaining the copyl mod ID, Java package, JSON schema, and config paths.

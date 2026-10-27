@@ -75,7 +75,7 @@ public final class MessageEditorScreen extends Screen {
 
         int contentWidth = Math.min(wide ? 820 : 520, Math.max(150, width - 16));
         int left = (width - contentWidth) / 2;
-        int top = wide ? 64 : 56;
+        int top = wide ? 64 : (useCompactLayout() ? 38 : 56);
         int gap = 12;
         int columnWidth = wide ? (contentWidth - gap) / 2 : contentWidth;
 
@@ -94,7 +94,7 @@ public final class MessageEditorScreen extends Screen {
         }
 
         int visibleRows = wide ? 5 : pageSize;
-        actionY = Math.min(height - 27, top + visibleRows * CARD_STEP + 4);
+        actionY = Math.min(Math.max(0, height - 28), top + visibleRows * CARD_STEP + 4);
         int actionWidth = Math.min(132, Math.max(68, (contentWidth - 10) / 2));
 
         addRenderableWidget(Button.builder(Component.translatable("screen.copyl.save"), b -> saveAndClose())
@@ -103,12 +103,16 @@ public final class MessageEditorScreen extends Screen {
                 .bounds(width / 2 + 5, actionY, actionWidth, 20).build());
 
         if (!wide && maxPage > 0) {
+            boolean compact = useCompactLayout();
+            int navY = compact ? 8 : 31;
+            int previousX = compact ? 8 : width / 2 - 70;
+            int nextX = compact ? width - 36 : width / 2 + 42;
             Button previous = addRenderableWidget(Button.builder(Component.literal("‹"), b -> changePage(-1))
-                    .bounds(width / 2 - 70, 31, 28, 18).build());
+                    .bounds(previousX, navY, 28, 18).build());
             previous.active = page > 0;
 
             Button next = addRenderableWidget(Button.builder(Component.literal("›"), b -> changePage(1))
-                    .bounds(width / 2 + 42, 31, 28, 18).build());
+                    .bounds(nextX, navY, 28, 18).build());
             next.active = page < maxPage;
         }
     }
@@ -181,10 +185,17 @@ public final class MessageEditorScreen extends Screen {
         return width >= 700 && height >= 350;
     }
 
+    private boolean useCompactLayout() {
+        return width < 360 || height < 180;
+    }
+
     private int pageSize() {
         if (useWideLayout()) return CopyLKeyMappings.SLOT_COUNT;
-        int available = Math.max(104, height - 118);
-        return Math.max(2, Math.min(5, available / CARD_STEP));
+        int top = useCompactLayout() ? 38 : 56;
+        int available = height - top - 28;
+        if (available < CARD_HEIGHT) return 1;
+        int visibleRows = 1 + (available - CARD_HEIGHT) / CARD_STEP;
+        return Math.max(1, Math.min(5, visibleRows));
     }
 
     private Component bindingLabel(int slot) {
@@ -303,8 +314,9 @@ public final class MessageEditorScreen extends Screen {
 
     private void drawBackdrop(GuiGraphics graphics) {
         graphics.fill(0, 0, width, height, DispatchPalette.NIGHT);
-        graphics.fill(0, 0, width, 52, DispatchPalette.PAPER);
-        graphics.fill(0, 51, width, 53, DispatchPalette.GHOUL_TEAL);
+        int headerHeight = useCompactLayout() ? 36 : 52;
+        graphics.fill(0, 0, width, headerHeight, DispatchPalette.PAPER);
+        graphics.fill(0, headerHeight - 1, width, headerHeight + 1, DispatchPalette.GHOUL_TEAL);
         graphics.fill(0, Math.max(0, actionY - 5), width, height, 0x9E251C12);
     }
 
@@ -363,6 +375,22 @@ public final class MessageEditorScreen extends Screen {
     }
 
     private void drawHeader(GuiGraphics graphics) {
+        if (useCompactLayout()) {
+            graphics.drawCenteredString(font, Component.translatable("screen.copyl.brand"),
+                    width / 2, 4, DispatchPalette.INK);
+            if (warning != null && System.currentTimeMillis() <= warningUntil) {
+                String clipped = font.plainSubstrByWidth(warning.getString(), Math.max(40, width - 16));
+                graphics.drawCenteredString(font, clipped, width / 2, 26, warningColor);
+            } else if (!useWideLayout()) {
+                int pageSize = pageSize();
+                int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
+                graphics.drawCenteredString(font,
+                        Component.translatable("screen.copyl.page", page + 1, maxPage + 1),
+                        width / 2, 26, DispatchPalette.INK_MUTED);
+            }
+            return;
+        }
+
         int configured = 0;
         int assigned = 0;
         for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
@@ -375,30 +403,21 @@ public final class MessageEditorScreen extends Screen {
         graphics.drawString(font, Component.translatable("screen.copyl.header_subtitle"), 14, 25, DispatchPalette.INK_MUTED, false);
 
         Component status = Component.translatable("screen.copyl.editor_summary", configured, assigned);
-        graphics.drawString(font,
-                status,
-                Math.max(14, width - font.width(status) - 14),
-                18,
-                DispatchPalette.GHOUL_TEAL,
-                false);
+        graphics.drawString(font, status, Math.max(14, width - font.width(status) - 14),
+                18, DispatchPalette.GHOUL_TEAL, false);
 
-        if (!useWideLayout()) {
+        if (!useCompactLayout() && !useWideLayout()) {
             int pageSize = pageSize();
             int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
             graphics.drawCenteredString(font,
                     Component.translatable("screen.copyl.page", page + 1, maxPage + 1),
-                    width / 2,
-                    36,
-                    DispatchPalette.INK_MUTED);
+                    width / 2, 36, DispatchPalette.INK_MUTED);
         }
 
-        if (warning != null && System.currentTimeMillis() <= warningUntil) {
+        if (!useCompactLayout() && warning != null && System.currentTimeMillis() <= warningUntil) {
             String clipped = font.plainSubstrByWidth(warning.getString(), Math.max(100, width - 30));
-            graphics.drawCenteredString(font,
-                    clipped,
-                    width / 2,
-                    Math.max(54, actionY - 13),
-                    warningColor);
+            graphics.drawCenteredString(font, clipped, width / 2,
+                    Math.max(54, actionY - 13), warningColor);
         }
     }
 

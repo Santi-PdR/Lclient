@@ -35,5 +35,7 @@
   "screen.copyl.backup_imported": "Backup importado y guardado correctamente.",
   "screen.copyl.backup_invalid": "El portapapeles no contiene un backup válido de CEDA Dispatch.",
   "screen.copyl.backup_save_failed": "El backup es válido, pero no se pudo guardar la configuración.",
-  "screen.copyl.brand": "CEDA DISPATCH"
+  "screen.copyl.brand": "CEDA DISPATCH",
+  "screen.copyl.backup_copy_short": "Copiar",
+  "screen.copyl.backup_import_short": "Cargar"
 }

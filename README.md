@@ -2,9 +2,9 @@
 
 CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CEDA Dispatch 3.4.0
+## CEDA Dispatch 3.5.0
 
-CEDA Dispatch 3.4 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
+CEDA Dispatch 3.5 adapta el escritorio de ajustes y el editor de mensajes a ventanas pequeñas y escalas de GUI altas. Mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
 
 ### Qué hace
 

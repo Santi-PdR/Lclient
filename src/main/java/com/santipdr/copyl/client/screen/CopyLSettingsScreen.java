@@ -7,6 +7,7 @@ import com.santipdr.copyl.client.CopyLProfileCodec;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -26,6 +27,8 @@ public final class CopyLSettingsScreen extends Screen {
     private int panelTop;
     private int panelWidth;
     private int panelHeight;
+    private boolean compactLayout;
+    private int contentInset;
 
     public CopyLSettingsScreen(Screen parent) {
         super(Component.translatable("screen.copyl.title"));
@@ -34,15 +37,18 @@ public final class CopyLSettingsScreen extends Screen {
 
     @Override
     protected void init() {
-        panelWidth = Math.min(440, Math.max(220, width - 24));
-        panelHeight = Math.min(220, Math.max(174, height - 16));
-        panelLeft = (width - panelWidth) / 2;
-        panelTop = Math.max(8, (height - panelHeight) / 2);
+        panelWidth = Math.min(440, Math.max(1, width - 16));
+        panelHeight = Math.min(220, Math.max(1, height - 16));
+        panelLeft = Math.max(0, (width - panelWidth) / 2);
+        panelTop = Math.max(0, (height - panelHeight) / 2);
+        compactLayout = panelWidth < 320 || panelHeight < 180;
+        contentInset = Math.min(compactLayout ? 8 : 20, Math.max(4, (panelWidth - 112) / 2));
 
-        int innerLeft = panelLeft + 20;
-        int innerWidth = panelWidth - 40;
-        int buttonHeight = 20;
-        int firstY = panelTop + 66;
+        int innerLeft = panelLeft + contentInset;
+        int innerWidth = Math.max(1, panelWidth - contentInset * 2);
+        int buttonHeight = compactLayout ? 16 : 20;
+        int rowStep = buttonHeight + (compactLayout ? 4 : 5);
+        int firstY = panelTop + (compactLayout ? 28 : 66);
 
         bindingButton = addRenderableWidget(Button.builder(bindingLabel(), b -> {
             capturing = true;
@@ -52,17 +58,26 @@ public final class CopyLSettingsScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.translatable("screen.copyl.edit_messages"), b -> {
             if (minecraft != null) minecraft.setScreen(new MessageEditorScreen(this));
-        }).bounds(innerLeft, firstY + 25, innerWidth, buttonHeight).build());
+        }).bounds(innerLeft, firstY + rowStep, innerWidth, buttonHeight).build());
 
-        int gap = 6;
-        int half = (innerWidth - gap) / 2;
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.backup_copy"), b -> copyBackup())
-                .bounds(innerLeft, firstY + 50, half, buttonHeight).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.backup_import"), b -> importBackup())
-                .bounds(innerLeft + half + gap, firstY + 50, innerWidth - half - gap, buttonHeight).build());
+        int gap = compactLayout ? 4 : 6;
+        int half = Math.max(1, (innerWidth - gap) / 2);
+        Component copyLabel = Component.translatable(compactLayout
+                ? "screen.copyl.backup_copy_short" : "screen.copyl.backup_copy");
+        Component importLabel = Component.translatable(compactLayout
+                ? "screen.copyl.backup_import_short" : "screen.copyl.backup_import");
+        Button copyButton = addRenderableWidget(Button.builder(copyLabel, b -> copyBackup())
+                .bounds(innerLeft, firstY + rowStep * 2, half, buttonHeight).build());
+        Button importButton = addRenderableWidget(Button.builder(importLabel, b -> importBackup())
+                .bounds(innerLeft + half + gap, firstY + rowStep * 2,
+                        Math.max(1, innerWidth - half - gap), buttonHeight).build());
+        if (compactLayout) {
+            copyButton.setTooltip(Tooltip.create(Component.translatable("screen.copyl.backup_copy")));
+            importButton.setTooltip(Tooltip.create(Component.translatable("screen.copyl.backup_import")));
+        }
 
         addRenderableWidget(Button.builder(Component.translatable("screen.copyl.back"), b -> onClose())
-                .bounds(innerLeft, firstY + 75, innerWidth, buttonHeight).build());
+                .bounds(innerLeft, firstY + rowStep * 3, innerWidth, buttonHeight).build());
     }
 
     private Component bindingLabel() {
@@ -187,13 +202,9 @@ public final class CopyLSettingsScreen extends Screen {
                 panelLeft + panelWidth, panelTop + 1,
                 DispatchPalette.PAPER_RULE);
 
-        graphics.drawString(font, Component.translatable("screen.copyl.brand"), panelLeft + 20, panelTop + 12, DispatchPalette.INK, false);
-        graphics.drawString(font,
-                Component.translatable("screen.copyl.header_subtitle"),
-                panelLeft + 20,
-                panelTop + 26,
-                DispatchPalette.INK_MUTED,
-                false);
+        int headerX = panelLeft + contentInset;
+        graphics.drawString(font, Component.translatable("screen.copyl.brand"),
+                headerX, panelTop + (compactLayout ? 5 : 12), DispatchPalette.INK, false);
 
         int configured = 0;
         int assigned = 0;
@@ -204,27 +215,33 @@ public final class CopyLSettingsScreen extends Screen {
         }
 
         Component summary = Component.translatable("screen.copyl.editor_summary", configured, assigned);
-        graphics.drawString(font,
-                summary,
-                panelLeft + 20,
-                panelTop + 43,
-                DispatchPalette.GHOUL_TEAL,
-                false);
+        boolean feedbackVisible = feedback != null && System.currentTimeMillis() <= feedbackUntil;
+        if (compactLayout) {
+            String status = feedbackVisible ? feedback.getString() : summary.getString();
+            String clipped = font.plainSubstrByWidth(status, Math.max(40, panelWidth - contentInset * 2));
+            graphics.drawString(font, clipped, headerX, panelTop + 18,
+                    feedbackVisible ? feedbackColor : DispatchPalette.GHOUL_TEAL, false);
+        } else {
+            graphics.drawString(font,
+                    Component.translatable("screen.copyl.header_subtitle"),
+                    headerX,
+                    panelTop + 26,
+                    DispatchPalette.INK_MUTED,
+                    false);
+            graphics.drawString(font, summary, headerX, panelTop + 43, DispatchPalette.GHOUL_TEAL, false);
 
-        String hint = font.plainSubstrByWidth(
-                Component.translatable("screen.copyl.config_hint").getString(),
-                Math.max(80, panelWidth - 40));
-        graphics.drawString(font, hint, panelLeft + 20, panelTop + 54, DispatchPalette.INK_MUTED, false);
+            String hint = font.plainSubstrByWidth(
+                    Component.translatable("screen.copyl.config_hint").getString(),
+                    Math.max(80, panelWidth - contentInset * 2));
+            graphics.drawString(font, hint, headerX, panelTop + 54, DispatchPalette.INK_MUTED, false);
+        }
 
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        if (feedback != null && System.currentTimeMillis() <= feedbackUntil) {
+        if (feedbackVisible && !compactLayout) {
             String clipped = font.plainSubstrByWidth(feedback.getString(), Math.max(80, panelWidth - 30));
-            graphics.drawCenteredString(font,
-                    clipped,
-                    width / 2,
-                    panelTop + panelHeight - 12,
-                    feedbackColor);
+            graphics.drawCenteredString(font, clipped, width / 2,
+                    panelTop + panelHeight - 12, feedbackColor);
         }
     }
 
