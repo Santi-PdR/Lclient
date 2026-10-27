@@ -22,7 +22,7 @@ public final class MessageEditorScreen extends Screen {
 
     private final Screen parent;
     private final DispatchEditBox[] nameFields = new DispatchEditBox[CopyLKeyMappings.SLOT_COUNT];
-    private final DispatchEditBox[] messageFields = new EditBox[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchEditBox[] messageFields = new DispatchEditBox[CopyLKeyMappings.SLOT_COUNT];
     private final DispatchButton[] bindingButtons = new DispatchButton[CopyLKeyMappings.SLOT_COUNT];
 
     private final String[] draftNames;
