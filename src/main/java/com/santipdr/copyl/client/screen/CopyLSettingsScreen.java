@@ -51,10 +51,10 @@ public final class CopyLSettingsScreen extends Screen {
         int firstY = panelTop + (compactLayout ? 28 : 66);
 
         bindingButton = addRenderableWidget(new DispatchButton(innerLeft, firstY, innerWidth, buttonHeight,
-                bindingLabel(), b -> {
+                bindingLabel(), () -> {
                     capturing = true;
                     feedback = Component.empty();
-                    b.setMessage(Component.translatable("screen.copyl.press_binding"));
+                    bindingButton.setMessage(Component.translatable("screen.copyl.press_binding"));
                 }, DispatchButton.Style.SECONDARY));
 
         addRenderableWidget(new DispatchButton(innerLeft, firstY + rowStep, innerWidth, buttonHeight,
