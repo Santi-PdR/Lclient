@@ -31,13 +31,13 @@ final class DispatchEditBox extends EditBox {
                 DispatchPalette.PAPER_HOVER);
 
         String value = getValue();
+        int start = value.isEmpty() ? 0 : lowerBoundScreenX(value.length(), innerLeft);
         if (value.isEmpty()) {
             Component placeholder = DispatchText.fit(
                     dispatchFont, hint, Math.max(1, innerRight - innerLeft));
             DispatchText.draw(graphics, dispatchFont, placeholder, innerLeft, textY,
                     DispatchPalette.INK_MUTED);
         } else {
-            int start = lowerBoundScreenX(value.length(), innerLeft);
             int end = visibleEnd(value, start, innerLeft, innerRight);
 
             String selected = getHighlighted();
@@ -63,9 +63,7 @@ final class DispatchEditBox extends EditBox {
         }
 
         if (isFocused()) {
-            String value = getValue();
-            int visibleStart = lowerBoundScreenX(value.length(), innerLeft);
-            int cursorX = customScreenX(value, visibleStart, getCursorPosition(), innerLeft);
+            int cursorX = customScreenX(value, start, getCursorPosition(), innerLeft);
             if (cursorX >= innerLeft && cursorX < innerRight) {
                 graphics.fill(cursorX, clearTop + 1, cursorX + 1, clearBottom - 1,
                         DispatchPalette.INK);
