@@ -65,11 +65,36 @@ final class DispatchButton extends AbstractButton {
             graphics.fill(x + 2, y + 2, x + width - 2, y + 3, highlight);
         }
 
+        if (active && isFocused()) drawFocusRing(graphics, x, y, width, height);
+
         Font font = Minecraft.getInstance().font;
-        String label = font.plainSubstrByWidth(getMessage().getString(), Math.max(1, width - 10));
+        String label = fitLabel(font, getMessage().getString(), Math.max(1, width - 12));
         int textX = x + (width - font.width(label)) / 2;
         int textY = y + Math.max(0, (height - 8) / 2);
         graphics.drawString(font, label, textX, textY, ink, false);
+    }
+
+    private static String fitLabel(Font font, String value, int maxWidth) {
+        if (font.width(value) <= maxWidth) return value;
+        String ellipsis = font.width("…") <= maxWidth ? "…" : "";
+        int available = Math.max(1, maxWidth - font.width(ellipsis));
+        String prefix = font.plainSubstrByWidth(value, available).stripTrailing();
+        return prefix + ellipsis;
+    }
+
+    private static void drawFocusRing(GuiGraphics graphics, int x, int y, int width, int height) {
+        int outer = DispatchPalette.FOCUS_EDGE;
+        int inner = DispatchPalette.FOCUS_HIGHLIGHT;
+
+        graphics.fill(x - 2, y - 2, x + width + 2, y - 1, outer);
+        graphics.fill(x - 2, y + height + 1, x + width + 2, y + height + 2, outer);
+        graphics.fill(x - 2, y - 1, x - 1, y + height + 1, outer);
+        graphics.fill(x + width + 1, y - 1, x + width + 2, y + height + 1, outer);
+
+        graphics.fill(x - 1, y - 1, x + width + 1, y, inner);
+        graphics.fill(x - 1, y + height, x + width + 1, y + height + 1, inner);
+        graphics.fill(x - 1, y, x, y + height, inner);
+        graphics.fill(x + width, y, x + width + 1, y + height, inner);
     }
 
     @Override

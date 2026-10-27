@@ -27,6 +27,8 @@ final class DispatchPalette {
     static final int BUTTON_DANGER = 0xFFF0DCD0;
     static final int BUTTON_DANGER_INK = 0xFF7B3026;
     static final int BUTTON_DISABLED = 0xFFC6B797;
+    static final int FOCUS_EDGE = 0xFF183E42;
+    static final int FOCUS_HIGHLIGHT = 0xFFB4D1C9;
 
     private DispatchPalette() {
     }

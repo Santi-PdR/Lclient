@@ -1,3 +1,10 @@
+## 3.8.0 — A clear mark for the next hand
+
+- Give the focused keyboard control a still, two-tone CEDA outline so the next action is easy to spot.
+- Keep focus visible on each paper button without changing its size or adding movement.
+- Show an ellipsis when a narrow button cannot fit its label, while preserving the full accessible label.
+- Keep gameplay and inventory screens untouched.
+
 ## 3.7.0 — Clear ink, field-worn paper
 
 - Flush the editor's first text pass before clearing its shadow, then draw the editable copy once in clean ink.
