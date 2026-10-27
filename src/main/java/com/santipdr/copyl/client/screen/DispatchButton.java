@@ -1,5 +1,7 @@
 package com.santipdr.copyl.client.screen;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -63,6 +65,7 @@ final class DispatchButton extends AbstractButton {
             graphics.fill(x + 2, y + 2, x + width - 2, y + 3, highlight);
         }
 
+        Font font = Minecraft.getInstance().font;
         String label = font.plainSubstrByWidth(getMessage().getString(), Math.max(1, width - 10));
         int textX = x + (width - font.width(label)) / 2;
         int textY = y + Math.max(0, (height - 8) / 2);
