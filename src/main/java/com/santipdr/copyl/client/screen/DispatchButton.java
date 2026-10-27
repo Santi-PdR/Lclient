@@ -15,6 +15,10 @@ final class DispatchButton extends AbstractButton {
 
     private final Runnable action;
     private final Style style;
+    private Component cachedLabel;
+    private String cachedSource;
+    private Font cachedFont;
+    private int cachedLabelWidth = -1;
 
     DispatchButton(int x, int y, int width, int height, Component label,
                    Runnable action, Style style) {
@@ -68,18 +72,23 @@ final class DispatchButton extends AbstractButton {
         if (active && isFocused()) drawFocusRing(graphics, x, y, width, height);
 
         Font font = Minecraft.getInstance().font;
-        String label = fitLabel(font, getMessage().getString(), Math.max(1, width - 12));
+        int maxLabelWidth = Math.max(1, width - 12);
+        Component label = fittedLabel(font, maxLabelWidth);
         int textX = x + (width - font.width(label)) / 2;
-        int textY = y + Math.max(0, (height - 8) / 2);
+        int textY = y + Math.max(0, (height - 9) / 2);
         graphics.drawString(font, label, textX, textY, ink, false);
     }
 
-    private static String fitLabel(Font font, String value, int maxWidth) {
-        if (font.width(value) <= maxWidth) return value;
-        String ellipsis = font.width("…") <= maxWidth ? "…" : "";
-        int available = Math.max(1, maxWidth - font.width(ellipsis));
-        String prefix = font.plainSubstrByWidth(value, available).stripTrailing();
-        return prefix + ellipsis;
+    private Component fittedLabel(Font font, int maxWidth) {
+        String source = getMessage().getString();
+        if (cachedLabel == null || font != cachedFont || maxWidth != cachedLabelWidth
+                || !source.equals(cachedSource)) {
+            cachedSource = source;
+            cachedFont = font;
+            cachedLabelWidth = maxWidth;
+            cachedLabel = DispatchText.fit(font, getMessage(), maxWidth);
+        }
+        return cachedLabel;
     }
 
     private static void drawFocusRing(GuiGraphics graphics, int x, int y, int width, int height) {

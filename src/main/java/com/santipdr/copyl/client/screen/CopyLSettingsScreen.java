@@ -215,8 +215,8 @@ public final class CopyLSettingsScreen extends Screen {
                 DispatchPalette.PAPER_RULE);
 
         int headerX = panelLeft + contentInset;
-        graphics.drawString(font, Component.translatable("screen.copyl.brand"),
-                headerX, panelTop + (compactLayout ? 5 : 12), DispatchPalette.INK, false);
+        DispatchText.draw(graphics, font, Component.translatable("screen.copyl.brand"),
+                headerX, panelTop + (compactLayout ? 5 : 12), DispatchPalette.INK);
 
         int configured = 0;
         int assigned = 0;
@@ -230,27 +230,25 @@ public final class CopyLSettingsScreen extends Screen {
         boolean feedbackVisible = feedback != null && System.currentTimeMillis() <= feedbackUntil;
         if (compactLayout) {
             String status = feedbackVisible ? feedback.getString() : summary.getString();
-            String clipped = font.plainSubstrByWidth(status, Math.max(40, panelWidth - contentInset * 2));
-            graphics.drawString(font, clipped, headerX, panelTop + 18,
-                    feedbackVisible ? feedbackColor : DispatchPalette.GHOUL_TEAL, false);
+            Component clipped = DispatchText.fit(font, Component.literal(status),
+                    Math.max(40, panelWidth - contentInset * 2));
+            DispatchText.draw(graphics, font, clipped, headerX, panelTop + 18,
+                    feedbackVisible ? feedbackColor : DispatchPalette.GHOUL_TEAL);
         } else {
-            graphics.drawString(font,
+            DispatchText.draw(graphics, font,
                     Component.translatable("screen.copyl.header_subtitle"),
-                    headerX,
-                    panelTop + 26,
-                    DispatchPalette.INK_MUTED,
-                    false);
-            graphics.drawString(font, summary, headerX, panelTop + 43, DispatchPalette.GHOUL_TEAL, false);
-
-            graphics.drawString(font,
+                    headerX, panelTop + 26, DispatchPalette.INK_MUTED);
+            DispatchText.draw(graphics, font, summary,
+                    headerX, panelTop + 43, DispatchPalette.GHOUL_TEAL);
+            DispatchText.draw(graphics, font,
                     Component.translatable("screen.copyl.config_hint"),
-                    headerX, panelTop + 54, DispatchPalette.INK_MUTED, false);
+                    headerX, panelTop + 54, DispatchPalette.INK_MUTED);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);
 
         if (feedbackVisible && !compactLayout) {
-            String clipped = font.plainSubstrByWidth(feedback.getString(), Math.max(80, panelWidth - 30));
+            Component clipped = DispatchText.fit(font, feedback, Math.max(80, panelWidth - 30));
             DispatchText.drawCentered(graphics, font, clipped, width / 2,
                     panelTop + panelHeight - 12, feedbackColor);
         }

@@ -1,0 +1,14 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "copyl:font/AtkinsonHyperlegible-Regular.ttf",
+      "shift": [
+        0,
+        0
+      ],
+      "size": 9,
+      "oversample": 2
+    }
+  ]
+}

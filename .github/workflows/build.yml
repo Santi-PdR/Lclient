@@ -50,6 +50,9 @@ jobs:
           unzip -Z1 "$JAR" > /tmp/copyl-entries.txt
           grep -Fxq 'META-INF/mods.toml' /tmp/copyl-entries.txt
           grep -Fxq 'com/santipdr/copyl/CopyL.class' /tmp/copyl-entries.txt
+          grep -Fxq 'assets/copyl/font/dispatch.json' /tmp/copyl-entries.txt
+          grep -Fxq 'assets/copyl/font/AtkinsonHyperlegible-Regular.ttf' /tmp/copyl-entries.txt
+          grep -Fxq 'assets/copyl/font/OFL.txt' /tmp/copyl-entries.txt
 
           cp "$JAR" /tmp/copyl-latest.jar
           SHA256="$(sha256sum /tmp/copyl-latest.jar | awk '{print $1}')"

@@ -2,9 +2,9 @@
 
 CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CEDA Dispatch 3.8.0
+## CEDA Dispatch 3.9.0
 
-El editor limpia la sombra antes de volver a escribir el texto con tinta plana; las tarjetas conservan sus bordes de papel gastado y una separación más clara. Ahora el control seleccionado con teclado lleva un contorno CEDA fijo, y las etiquetas estrechas terminan con puntos suspensivos sin perder su nombre accesible. Todo queda quieto y limitado a estas pantallas. Se mantienen el ajuste para ventanas pequeñas, los diez atajos y la configuración portable.
+CEDA Dispatch usa ahora una tipografía Atkinson Hyperlegible, pensada para distinguir letras con claridad sobre el papel. Se aplica a botones, encabezados y campos escritos, sin cambiar la fuente del resto de Minecraft. Se conserva el cursor, la selección y el desplazamiento del texto; el contorno de foco por teclado y las tarjetas de papel siguen quietos y limitados a estas pantallas.
 
 ### Qué hace
 
@@ -139,3 +139,6 @@ GitHub Actions:
 ## Deploy
 
 El PowerShell de deploy no compila nada localmente. Lee `version.txt` y `sha256.txt`, descarga `copyl-latest.jar.b64`, verifica su SHA-256 y reemplaza únicamente versiones anteriores de CopyL/Lclient en la instancia configurada. El mismo script puede instalar futuras versiones publicadas sin editar el número de versión a mano.
+
+
+La tipografía Atkinson Hyperlegible es de Braille Institute of America y se distribuye bajo SIL Open Font License 1.1; la licencia acompaña al mod en `assets/copyl/font/OFL.txt`.

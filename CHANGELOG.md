@@ -1,3 +1,10 @@
+## 3.9.0 — Clear type for field reports
+
+- Give CEDA Dispatch its own Atkinson Hyperlegible typeface, sized for quick reading over parchment.
+- Use the same font for buttons, headings, notices, and editable field copy; preserve cursor, selection, and horizontal scrolling.
+- Bundle the original SIL Open Font License with the font.
+- Keep Minecraft's other screens and gameplay typography unchanged.
+
 ## 3.8.0 — A clear mark for the next hand
 
 - Give the focused keyboard control a still, two-tone CEDA outline so the next action is easy to spot.

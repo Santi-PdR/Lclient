@@ -393,7 +393,7 @@ public final class MessageEditorScreen extends Screen {
             DispatchText.drawCentered(graphics, font, Component.translatable("screen.copyl.brand"),
                     width / 2, 4, DispatchPalette.INK);
             if (warning != null && System.currentTimeMillis() <= warningUntil) {
-                String clipped = font.plainSubstrByWidth(warning.getString(), Math.max(40, width - 16));
+                Component clipped = DispatchText.fit(font, warning, Math.max(40, width - 16));
                 DispatchText.drawCentered(graphics, font, clipped, width / 2, 26, warningColor);
             } else if (!useWideLayout()) {
                 int pageSize = pageSize();
@@ -413,12 +413,15 @@ public final class MessageEditorScreen extends Screen {
             if (draftBindings[i] >= 0) assigned++;
         }
 
-        graphics.drawString(font, Component.translatable("screen.copyl.brand"), 14, 11, DispatchPalette.INK, false);
-        graphics.drawString(font, Component.translatable("screen.copyl.header_subtitle"), 14, 25, DispatchPalette.INK_MUTED, false);
+        DispatchText.draw(graphics, font, Component.translatable("screen.copyl.brand"),
+                14, 11, DispatchPalette.INK);
+        DispatchText.draw(graphics, font, Component.translatable("screen.copyl.header_subtitle"),
+                14, 25, DispatchPalette.INK_MUTED);
 
         Component status = Component.translatable("screen.copyl.editor_summary", configured, assigned);
-        graphics.drawString(font, status, Math.max(14, width - font.width(status) - 14),
-                18, DispatchPalette.GHOUL_TEAL, false);
+        int statusWidth = DispatchText.width(font, status);
+        DispatchText.draw(graphics, font, status, Math.max(14, width - statusWidth - 14),
+                18, DispatchPalette.GHOUL_TEAL);
 
         if (!useCompactLayout() && !useWideLayout()) {
             int pageSize = pageSize();
@@ -429,7 +432,7 @@ public final class MessageEditorScreen extends Screen {
         }
 
         if (!useCompactLayout() && warning != null && System.currentTimeMillis() <= warningUntil) {
-            String clipped = font.plainSubstrByWidth(warning.getString(), Math.max(100, width - 30));
+            Component clipped = DispatchText.fit(font, warning, Math.max(100, width - 30));
             DispatchText.drawCentered(graphics, font, clipped, width / 2,
                     Math.max(54, actionY - 13), warningColor);
         }

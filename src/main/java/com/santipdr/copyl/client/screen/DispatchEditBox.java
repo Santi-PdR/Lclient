@@ -32,14 +32,13 @@ final class DispatchEditBox extends EditBox {
 
         String value = getValue();
         if (value.isEmpty()) {
-            String placeholder = dispatchFont.plainSubstrByWidth(
-                    hint.getString(), Math.max(1, innerRight - innerLeft));
-            graphics.drawString(dispatchFont, placeholder, innerLeft, textY,
-                    DispatchPalette.INK_MUTED, false);
+            Component placeholder = DispatchText.fit(
+                    dispatchFont, hint, Math.max(1, innerRight - innerLeft));
+            DispatchText.draw(graphics, dispatchFont, placeholder, innerLeft, textY,
+                    DispatchPalette.INK_MUTED);
         } else {
             int start = lowerBoundScreenX(value.length(), innerLeft);
-            int end = lowerBoundScreenX(value.length(), innerRight + 1);
-            end = Math.max(start, Math.min(value.length(), end));
+            int end = visibleEnd(value, start, innerLeft, innerRight);
 
             String selected = getHighlighted();
             int selectionStart = selected.isEmpty() ? -1
@@ -48,8 +47,8 @@ final class DispatchEditBox extends EditBox {
                 int visibleStart = Math.max(start, selectionStart);
                 int visibleEnd = Math.min(end, selectionStart + selected.length());
                 if (visibleEnd > visibleStart) {
-                    int selectionX = Math.max(innerLeft, getScreenX(visibleStart));
-                    int selectionRight = Math.min(innerRight, getScreenX(visibleEnd));
+                    int selectionX = Math.max(innerLeft, customScreenX(value, start, visibleStart, innerLeft));
+                    int selectionRight = Math.min(innerRight, customScreenX(value, start, visibleEnd, innerLeft));
                     graphics.fill(selectionX, clearTop, selectionRight, clearBottom,
                             DispatchPalette.GHOUL_TEAL);
                     drawRange(graphics, value, start, visibleStart, textY, DispatchPalette.INK);
@@ -64,7 +63,9 @@ final class DispatchEditBox extends EditBox {
         }
 
         if (isFocused()) {
-            int cursorX = getScreenX(getCursorPosition());
+            String value = getValue();
+            int visibleStart = lowerBoundScreenX(value.length(), innerLeft);
+            int cursorX = customScreenX(value, visibleStart, getCursorPosition(), innerLeft);
             if (cursorX >= innerLeft && cursorX < innerRight) {
                 graphics.fill(cursorX, clearTop + 1, cursorX + 1, clearBottom - 1,
                         DispatchPalette.INK);
@@ -81,6 +82,25 @@ final class DispatchEditBox extends EditBox {
             else high = middle;
         }
         return low;
+    }
+
+    private int visibleEnd(String value, int start, int left, int right) {
+        int position = start;
+        int currentX = left;
+        while (position < value.length()) {
+            int codePoint = value.codePointAt(position);
+            int next = position + Character.charCount(codePoint);
+            int glyphWidth = DispatchText.width(dispatchFont, value.substring(position, next));
+            if (currentX + glyphWidth > right + 1) break;
+            currentX += glyphWidth;
+            position = next;
+        }
+        return position;
+    }
+
+    private int customScreenX(String value, int start, int position, int left) {
+        int bounded = Math.max(start, Math.min(value.length(), position));
+        return left + DispatchText.width(dispatchFont, value.substring(start, bounded));
     }
 
     private static int locateSelection(String value, String selected, int cursor) {
@@ -102,7 +122,9 @@ final class DispatchEditBox extends EditBox {
     private void drawRange(GuiGraphics graphics, String value, int start, int end,
                           int y, int color) {
         if (end <= start) return;
-        graphics.drawString(dispatchFont, value.substring(start, end),
-                getScreenX(start), y, color, false);
+        String valuePart = value.substring(start, end);
+        int visibleStart = lowerBoundScreenX(value.length(), getX() + 2);
+        int x = customScreenX(value, visibleStart, start, getX() + 2);
+        DispatchText.draw(graphics, dispatchFont, Component.literal(valuePart), x, y, color);
     }
 }
