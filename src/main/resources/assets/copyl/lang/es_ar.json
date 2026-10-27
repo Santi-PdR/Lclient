@@ -17,7 +17,7 @@
   "screen.copyl.mouse_button": "Mouse %s",
   "screen.copyl.editor_summary": "%s/10 mensajes  •  %s atajos",
   "screen.copyl.page": "Página %s/%s",
-  "screen.copyl.config_hint": "Teclado y mouse se configuran aquí; CEDA Dispatch no agrega entradas a Opciones > Controles.",
+  "screen.copyl.config_hint": "Configura aquí tus atajos.",
   "screen.copyl.binding_reserved": "Ese atajo está reservado para abrir CEDA Dispatch.",
   "screen.copyl.binding_moved": "Atajo movido del slot %s al slot %s.",
   "screen.copyl.slot_cleared": "Slot %s limpiado.",

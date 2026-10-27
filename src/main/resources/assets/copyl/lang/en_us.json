@@ -17,7 +17,7 @@
   "screen.copyl.mouse_button": "Mouse %s",
   "screen.copyl.editor_summary": "%s/10 messages  •  %s shortcuts",
   "screen.copyl.page": "Page %s/%s",
-  "screen.copyl.config_hint": "Keyboard and mouse shortcuts are configured here; CEDA Dispatch adds nothing to Options > Controls.",
+  "screen.copyl.config_hint": "Set your shortcuts here.",
   "screen.copyl.binding_reserved": "That shortcut is reserved for opening CEDA Dispatch.",
   "screen.copyl.binding_moved": "Shortcut moved from slot %s to slot %s.",
   "screen.copyl.slot_cleared": "Slot %s cleared.",

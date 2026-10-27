@@ -204,6 +204,15 @@ public final class CopyLSettingsScreen extends Screen {
         graphics.fill(panelLeft + 4, panelTop,
                 panelLeft + panelWidth, panelTop + 1,
                 DispatchPalette.PAPER_RULE);
+        graphics.fill(panelLeft + 5, panelTop + 2,
+                panelLeft + panelWidth - 8, panelTop + 3,
+                0x44FFFFFF);
+        graphics.fill(panelLeft + panelWidth - 2, panelTop + 3,
+                panelLeft + panelWidth - 1, panelTop + panelHeight - 4,
+                DispatchPalette.PAPER_RULE);
+        graphics.fill(panelLeft + 10, panelTop + panelHeight - 3,
+                panelLeft + panelWidth - 10, panelTop + panelHeight - 2,
+                DispatchPalette.PAPER_RULE);
 
         int headerX = panelLeft + contentInset;
         graphics.drawString(font, Component.translatable("screen.copyl.brand"),
@@ -233,10 +242,9 @@ public final class CopyLSettingsScreen extends Screen {
                     false);
             graphics.drawString(font, summary, headerX, panelTop + 43, DispatchPalette.GHOUL_TEAL, false);
 
-            String hint = font.plainSubstrByWidth(
-                    Component.translatable("screen.copyl.config_hint").getString(),
-                    Math.max(80, panelWidth - contentInset * 2));
-            graphics.drawString(font, hint, headerX, panelTop + 54, DispatchPalette.INK_MUTED, false);
+            graphics.drawString(font,
+                    Component.translatable("screen.copyl.config_hint"),
+                    headerX, panelTop + 54, DispatchPalette.INK_MUTED, false);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);

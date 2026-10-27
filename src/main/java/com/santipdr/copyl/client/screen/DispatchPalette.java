@@ -9,7 +9,7 @@ final class DispatchPalette {
     static final int PAPER_HOVER = 0xFFF1E5C7;
     static final int PAPER_EDGE = 0xFF80613C;
     static final int PAPER_RULE = 0xAA80613C;
-    static final int INK = 0xFF302316;
+    static final int INK = 0xFF463827;
     static final int INK_MUTED = 0xFF70583A;
     static final int GHOUL_TEAL = 0xFF315B61;
     static final int BLOOD = 0xFF7B3026;

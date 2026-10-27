@@ -1,3 +1,10 @@
+## 3.7.0 — Clear ink, field-worn paper
+
+- Flush the editor's first text pass before clearing its shadow, then draw the editable copy once in clean ink.
+- Give field-message cards a paper-cut edge, ruled writing line, and a quiet slot divider.
+- Soften the ink color and replace the clipped settings explanation with a short bilingual hint.
+- Keep all changes still and limited to the CEDA menu.
+
 # Changelog
 
 ## 3.6.0 — Clean ink, clear controls

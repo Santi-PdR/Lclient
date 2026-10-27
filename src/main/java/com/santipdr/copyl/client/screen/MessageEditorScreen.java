@@ -311,6 +311,7 @@ public final class MessageEditorScreen extends Screen {
         drawCards(graphics, mouseX, mouseY);
         drawEditorFields(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
+        graphics.flush();
         drawCleanEditorText(graphics);
         drawHeader(graphics);
     }
@@ -367,9 +368,15 @@ public final class MessageEditorScreen extends Screen {
             int body = hovered ? DispatchPalette.PAPER_HOVER : 0xE8DCC09A;
 
             graphics.fill(x + 2, y + 2, x + w + 2, y + CARD_HEIGHT + 2, DispatchPalette.CARD_SHADOW);
-            graphics.fill(x, y, x + w, y + CARD_HEIGHT, body);
-            graphics.fill(x, y, x + 3, y + CARD_HEIGHT, accent);
-            graphics.fill(x + 3, y, x + w, y + 1, hovered ? 0xAA9A794B : DispatchPalette.PAPER_RULE);
+            graphics.fill(x + 2, y, x + w - 2, y + CARD_HEIGHT, body);
+            graphics.fill(x + 1, y + 3, x + 2, y + CARD_HEIGHT - 3, body);
+            graphics.fill(x + w - 2, y + 3, x + w - 1, y + CARD_HEIGHT - 3, body);
+            graphics.fill(x + 5, y, x + w - 5, y + 1, DispatchPalette.PAPER_RULE);
+            graphics.fill(x + 5, y + CARD_HEIGHT - 1, x + w - 5, y + CARD_HEIGHT,
+                    DispatchPalette.PAPER_RULE);
+            graphics.fill(x + 2, y + 3, x + 4, y + CARD_HEIGHT - 3, accent);
+            graphics.fill(x + 31, y + 5, x + 32, y + CARD_HEIGHT - 5, 0x557F613C);
+            graphics.fill(x + 35, y + 24, x + w - 6, y + 25, 0x3D80613C);
 
             DispatchText.drawCentered(graphics, font,
                     String.format("%02d", i + 1), x + 18, y + 8, accent);
