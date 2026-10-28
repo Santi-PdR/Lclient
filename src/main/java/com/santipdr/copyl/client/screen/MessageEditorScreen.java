@@ -6,8 +6,6 @@ import com.santipdr.copyl.client.CopyLKeyMappings;
 import com.santipdr.copyl.client.MessageConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -23,9 +21,9 @@ public final class MessageEditorScreen extends Screen {
     private static final long DISCARD_CONFIRM_MS = 3500L;
 
     private final Screen parent;
-    private final EditBox[] nameFields = new EditBox[CopyLKeyMappings.SLOT_COUNT];
-    private final EditBox[] messageFields = new EditBox[CopyLKeyMappings.SLOT_COUNT];
-    private final Button[] bindingButtons = new Button[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchEditBox[] nameFields = new DispatchEditBox[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchEditBox[] messageFields = new DispatchEditBox[CopyLKeyMappings.SLOT_COUNT];
+    private final DispatchButton[] bindingButtons = new DispatchButton[CopyLKeyMappings.SLOT_COUNT];
 
     private final String[] draftNames;
     private final String[] draftMessages;
@@ -41,7 +39,7 @@ public final class MessageEditorScreen extends Screen {
     private int bindingIndex = -1;
     private int page;
     private Component warning = Component.empty();
-    private int warningColor = 0xFFFFB777;
+    private int warningColor = DispatchPalette.WARNING;
     private long warningUntil;
     private long discardConfirmUntil;
     private int actionY;
@@ -75,7 +73,7 @@ public final class MessageEditorScreen extends Screen {
 
         int contentWidth = Math.min(wide ? 820 : 520, Math.max(150, width - 16));
         int left = (width - contentWidth) / 2;
-        int top = wide ? 64 : 56;
+        int top = wide ? 64 : (useCompactLayout() ? 38 : 56);
         int gap = 12;
         int columnWidth = wide ? (contentWidth - gap) / 2 : contentWidth;
 
@@ -94,21 +92,27 @@ public final class MessageEditorScreen extends Screen {
         }
 
         int visibleRows = wide ? 5 : pageSize;
-        actionY = Math.min(height - 27, top + visibleRows * CARD_STEP + 4);
+        actionY = Math.min(Math.max(0, height - 28), top + visibleRows * CARD_STEP + 4);
         int actionWidth = Math.min(132, Math.max(68, (contentWidth - 10) / 2));
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.save"), b -> saveAndClose())
-                .bounds(width / 2 - actionWidth - 5, actionY, actionWidth, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.copyl.cancel"), b -> attemptCancel())
-                .bounds(width / 2 + 5, actionY, actionWidth, 20).build());
+        addRenderableWidget(new DispatchButton(width / 2 - actionWidth - 5, actionY,
+                actionWidth, 20, Component.translatable("screen.copyl.save"),
+                this::saveAndClose, DispatchButton.Style.PRIMARY));
+        addRenderableWidget(new DispatchButton(width / 2 + 5, actionY,
+                actionWidth, 20, Component.translatable("screen.copyl.cancel"),
+                this::attemptCancel, DispatchButton.Style.SECONDARY));
 
         if (!wide && maxPage > 0) {
-            Button previous = addRenderableWidget(Button.builder(Component.literal("‹"), b -> changePage(-1))
-                    .bounds(width / 2 - 70, 31, 28, 18).build());
+            boolean compact = useCompactLayout();
+            int navY = compact ? 8 : 31;
+            int previousX = compact ? 8 : width / 2 - 70;
+            int nextX = compact ? width - 36 : width / 2 + 42;
+            DispatchButton previous = addRenderableWidget(new DispatchButton(previousX, navY, 28, 18,
+                    Component.literal("‹"), () -> changePage(-1), DispatchButton.Style.SECONDARY));
             previous.active = page > 0;
 
-            Button next = addRenderableWidget(Button.builder(Component.literal("›"), b -> changePage(1))
-                    .bounds(width / 2 + 42, 31, 28, 18).build());
+            DispatchButton next = addRenderableWidget(new DispatchButton(nextX, navY, 28, 18,
+                    Component.literal("›"), () -> changePage(1), DispatchButton.Style.SECONDARY));
             next.active = page < maxPage;
         }
     }
@@ -129,29 +133,37 @@ public final class MessageEditorScreen extends Screen {
             bindingWidth = Math.max(42, bindingWidth - (occupied - innerWidth));
         }
 
-        EditBox name = new EditBox(font, innerX, y + 4, nameWidth, 18,
-                Component.translatable("screen.copyl.slot_name", slot + 1));
+        DispatchEditBox name = new DispatchEditBox(font, innerX, y + 4, nameWidth, 18,
+                Component.translatable("screen.copyl.slot_name", slot + 1),
+                Component.translatable("screen.copyl.name_hint"));
         name.setMaxLength(MAX_NAME_LENGTH);
         name.setValue(draftNames[slot]);
-        name.setHint(Component.translatable("screen.copyl.name_hint"));
+        name.setBordered(false);
+        name.setTextColor(DispatchPalette.INK);
+        name.setTextColorUneditable(DispatchPalette.INK_MUTED);
         nameFields[slot] = addRenderableWidget(name);
 
         int bindingX = innerX + nameWidth + 4;
-        bindingButtons[slot] = addRenderableWidget(Button.builder(bindingLabel(slot), b -> {
-            captureFields();
-            bindingIndex = slot;
-            warning = Component.empty();
-            updateBindingLabels();
-        }).bounds(bindingX, y + 4, bindingWidth, 18).build());
+        bindingButtons[slot] = addRenderableWidget(new DispatchButton(bindingX, y + 4,
+                bindingWidth, 18, bindingLabel(slot), () -> {
+                    captureFields();
+                    bindingIndex = slot;
+                    warning = Component.empty();
+                    updateBindingLabels();
+                }, DispatchButton.Style.SECONDARY));
 
-        addRenderableWidget(Button.builder(Component.literal("×"), b -> clearSlot(slot))
-                .bounds(bindingX + bindingWidth + 4, y + 4, clearWidth, 18).build());
+        addRenderableWidget(new DispatchButton(bindingX + bindingWidth + 4, y + 4,
+                clearWidth, 18, Component.literal("×"), () -> clearSlot(slot),
+                DispatchButton.Style.DANGER));
 
-        EditBox message = new EditBox(font, innerX, y + 26, innerWidth, 18,
-                Component.translatable("screen.copyl.slot_message", slot + 1));
+        DispatchEditBox message = new DispatchEditBox(font, innerX, y + 26, innerWidth, 18,
+                Component.translatable("screen.copyl.slot_message", slot + 1),
+                Component.translatable("screen.copyl.message_hint"));
         message.setMaxLength(MAX_MESSAGE_LENGTH);
         message.setValue(draftMessages[slot]);
-        message.setHint(Component.translatable("screen.copyl.message_hint"));
+        message.setBordered(false);
+        message.setTextColor(DispatchPalette.INK);
+        message.setTextColorUneditable(DispatchPalette.INK_MUTED);
         messageFields[slot] = addRenderableWidget(message);
     }
 
@@ -161,7 +173,7 @@ public final class MessageEditorScreen extends Screen {
         draftBindings[slot] = CopyLBinding.UNBOUND;
         if (messageFields[slot] != null) messageFields[slot].setValue("");
         updateBindingLabels();
-        showWarning(Component.translatable("screen.copyl.slot_cleared", slot + 1), 0xFF8EDBFF);
+        showWarning(Component.translatable("screen.copyl.slot_cleared", slot + 1), DispatchPalette.SUCCESS);
     }
 
     private void changePage(int direction) {
@@ -175,10 +187,17 @@ public final class MessageEditorScreen extends Screen {
         return width >= 700 && height >= 350;
     }
 
+    private boolean useCompactLayout() {
+        return width < 360 || height < 180;
+    }
+
     private int pageSize() {
         if (useWideLayout()) return CopyLKeyMappings.SLOT_COUNT;
-        int available = Math.max(104, height - 118);
-        return Math.max(2, Math.min(5, available / CARD_STEP));
+        int top = useCompactLayout() ? 38 : 56;
+        int available = height - top - 28;
+        if (available < CARD_HEIGHT) return 1;
+        int visibleRows = 1 + (available - CARD_HEIGHT) / CARD_STEP;
+        return Math.max(1, Math.min(5, visibleRows));
     }
 
     private Component bindingLabel(int slot) {
@@ -203,7 +222,7 @@ public final class MessageEditorScreen extends Screen {
             } else {
                 int candidate = CopyLBinding.sanitize(keyCode);
                 if (candidate == CopyLConfig.get().openKey) {
-                    showWarning(Component.translatable("screen.copyl.binding_reserved"), 0xFFFFB777);
+                    showWarning(Component.translatable("screen.copyl.binding_reserved"), DispatchPalette.WARNING);
                 } else if (candidate >= 0) {
                     assignDraftBinding(bindingIndex, candidate);
                 }
@@ -233,7 +252,7 @@ public final class MessageEditorScreen extends Screen {
         if (bindingIndex >= 0) {
             int candidate = CopyLBinding.encodeMouse(button);
             if (candidate == CopyLConfig.get().openKey) {
-                showWarning(Component.translatable("screen.copyl.binding_reserved"), 0xFFFFB777);
+                showWarning(Component.translatable("screen.copyl.binding_reserved"), DispatchPalette.WARNING);
             } else if (candidate >= 0) {
                 assignDraftBinding(bindingIndex, candidate);
             }
@@ -254,7 +273,7 @@ public final class MessageEditorScreen extends Screen {
         }
         draftBindings[slot] = binding;
         if (previousSlot >= 0) {
-            showWarning(Component.translatable("screen.copyl.binding_moved", previousSlot + 1, slot + 1), 0xFF8EDBFF);
+            showWarning(Component.translatable("screen.copyl.binding_moved", previousSlot + 1, slot + 1), DispatchPalette.SUCCESS);
         }
     }
 
@@ -290,17 +309,48 @@ public final class MessageEditorScreen extends Screen {
         renderBackground(graphics);
         drawBackdrop(graphics);
         drawCards(graphics, mouseX, mouseY);
+        drawEditorFields(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
+        graphics.flush();
+        drawCleanEditorText(graphics);
         drawHeader(graphics);
     }
 
     private void drawBackdrop(GuiGraphics graphics) {
-        graphics.fill(0, 0, width, height, 0xA905080D);
-        graphics.fill(0, 0, width, 52, 0xE60B1118);
-        graphics.fill(0, 51, width, 53, 0xFF55B9E8);
-        graphics.fill(0, Math.max(0, actionY - 5), width, height, 0x9E090D12);
+        graphics.fill(0, 0, width, height, DispatchPalette.NIGHT);
+        int headerHeight = useCompactLayout() ? 36 : 52;
+        graphics.fill(0, 0, width, headerHeight, DispatchPalette.PAPER);
+        graphics.fill(0, headerHeight - 1, width, headerHeight + 1, DispatchPalette.GHOUL_TEAL);
+        graphics.fill(0, Math.max(0, actionY - 5), width, height, 0x9E251C12);
     }
 
+    private void drawEditorFields(GuiGraphics graphics) {
+        for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
+            drawEditorField(graphics, nameFields[i]);
+            drawEditorField(graphics, messageFields[i]);
+        }
+    }
+
+    private void drawEditorField(GuiGraphics graphics, DispatchEditBox field) {
+        if (field == null || !field.visible) return;
+        int x = field.getX();
+        int y = field.getY();
+        int right = x + field.getWidth();
+        int bottom = y + field.getHeight();
+        int edge = field.isFocused() ? DispatchPalette.GHOUL_TEAL : DispatchPalette.PAPER_EDGE;
+        graphics.fill(x, y, right, bottom, DispatchPalette.PAPER_HOVER);
+        graphics.fill(x, y, right, y + 1, edge);
+        graphics.fill(x, bottom - 1, right, bottom, edge);
+        graphics.fill(x, y, x + 1, bottom, edge);
+        graphics.fill(right - 1, y, right, bottom, edge);
+    }
+
+    private void drawCleanEditorText(GuiGraphics graphics) {
+        for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
+            if (nameFields[i] != null) nameFields[i].drawFlatText(graphics);
+            if (messageFields[i] != null) messageFields[i].drawFlatText(graphics);
+        }
+    }
     private void drawCards(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
             if (cardX[i] < 0) continue;
@@ -313,29 +363,48 @@ public final class MessageEditorScreen extends Screen {
             boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + CARD_HEIGHT;
 
             int accent = configured && assigned
-                    ? 0xFF55B9E8
-                    : (configured || assigned ? 0xFFE6AE63 : 0xFF344451);
-            int body = hovered ? 0xEA19232D : 0xD9141B23;
+                    ? DispatchPalette.GHOUL_TEAL
+                    : (configured || assigned ? DispatchPalette.GOLD : DispatchPalette.EMPTY);
+            int body = hovered ? DispatchPalette.PAPER_HOVER : 0xE8DCC09A;
 
-            graphics.fill(x + 2, y + 2, x + w + 2, y + CARD_HEIGHT + 2, 0x66000000);
-            graphics.fill(x, y, x + w, y + CARD_HEIGHT, body);
-            graphics.fill(x, y, x + 3, y + CARD_HEIGHT, accent);
-            graphics.fill(x + 3, y, x + w, y + 1, hovered ? 0xAA6494AE : 0x553B5263);
+            graphics.fill(x + 2, y + 2, x + w + 2, y + CARD_HEIGHT + 2, DispatchPalette.CARD_SHADOW);
+            graphics.fill(x + 2, y, x + w - 2, y + CARD_HEIGHT, body);
+            graphics.fill(x + 1, y + 3, x + 2, y + CARD_HEIGHT - 3, body);
+            graphics.fill(x + w - 2, y + 3, x + w - 1, y + CARD_HEIGHT - 3, body);
+            graphics.fill(x + 5, y, x + w - 5, y + 1, DispatchPalette.PAPER_RULE);
+            graphics.fill(x + 5, y + CARD_HEIGHT - 1, x + w - 5, y + CARD_HEIGHT,
+                    DispatchPalette.PAPER_RULE);
+            graphics.fill(x + 2, y + 3, x + 4, y + CARD_HEIGHT - 3, accent);
+            graphics.fill(x + 31, y + 5, x + 32, y + CARD_HEIGHT - 5, 0x557F613C);
+            graphics.fill(x + 35, y + 24, x + w - 6, y + 25, 0x3D80613C);
 
-            graphics.drawCenteredString(font,
-                    String.format("%02d", i + 1),
-                    x + 18,
-                    y + 8,
-                    accent);
+            DispatchText.drawCentered(graphics, font,
+                    String.format("%02d", i + 1), x + 18, y + 8, accent);
 
             String tag;
             if (!configured) tag = assigned ? "KEY" : "—";
             else tag = message.startsWith("/") ? "CMD" : "CHAT";
-            graphics.drawCenteredString(font, tag, x + 18, y + 29, 0xFF91A4B2);
+            DispatchText.drawCentered(graphics, font, tag, x + 18, y + 29, DispatchPalette.INK_MUTED);
         }
     }
 
     private void drawHeader(GuiGraphics graphics) {
+        if (useCompactLayout()) {
+            DispatchText.drawCentered(graphics, font, Component.translatable("screen.copyl.brand"),
+                    width / 2, 4, DispatchPalette.INK);
+            if (warning != null && System.currentTimeMillis() <= warningUntil) {
+                Component clipped = DispatchText.fit(font, warning, Math.max(40, width - 16));
+                DispatchText.drawCentered(graphics, font, clipped, width / 2, 26, warningColor);
+            } else if (!useWideLayout()) {
+                int pageSize = pageSize();
+                int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
+                DispatchText.drawCentered(graphics, font,
+                        Component.translatable("screen.copyl.page", page + 1, maxPage + 1),
+                        width / 2, 26, DispatchPalette.INK_MUTED);
+            }
+            return;
+        }
+
         int configured = 0;
         int assigned = 0;
         for (int i = 0; i < CopyLKeyMappings.SLOT_COUNT; i++) {
@@ -344,34 +413,28 @@ public final class MessageEditorScreen extends Screen {
             if (draftBindings[i] >= 0) assigned++;
         }
 
-        graphics.drawString(font, "COPYL", 14, 11, 0xFFFFFFFF, false);
-        graphics.drawString(font, Component.translatable("screen.copyl.header_subtitle"), 14, 25, 0xFF7C9AAF, false);
+        DispatchText.draw(graphics, font, Component.translatable("screen.copyl.brand"),
+                14, 11, DispatchPalette.INK);
+        DispatchText.draw(graphics, font, Component.translatable("screen.copyl.header_subtitle"),
+                14, 25, DispatchPalette.INK_MUTED);
 
         Component status = Component.translatable("screen.copyl.editor_summary", configured, assigned);
-        graphics.drawString(font,
-                status,
-                Math.max(14, width - font.width(status) - 14),
-                18,
-                0xFF9FCFE6,
-                false);
+        int statusWidth = DispatchText.width(font, status);
+        DispatchText.draw(graphics, font, status, Math.max(14, width - statusWidth - 14),
+                18, DispatchPalette.GHOUL_TEAL);
 
-        if (!useWideLayout()) {
+        if (!useCompactLayout() && !useWideLayout()) {
             int pageSize = pageSize();
             int maxPage = Math.max(0, (CopyLKeyMappings.SLOT_COUNT - 1) / pageSize);
-            graphics.drawCenteredString(font,
+            DispatchText.drawCentered(graphics, font,
                     Component.translatable("screen.copyl.page", page + 1, maxPage + 1),
-                    width / 2,
-                    36,
-                    0xFFA8B8C6);
+                    width / 2, 36, DispatchPalette.INK_MUTED);
         }
 
-        if (warning != null && System.currentTimeMillis() <= warningUntil) {
-            String clipped = font.plainSubstrByWidth(warning.getString(), Math.max(100, width - 30));
-            graphics.drawCenteredString(font,
-                    clipped,
-                    width / 2,
-                    Math.max(54, actionY - 13),
-                    warningColor);
+        if (!useCompactLayout() && warning != null && System.currentTimeMillis() <= warningUntil) {
+            Component clipped = DispatchText.fit(font, warning, Math.max(100, width - 30));
+            DispatchText.drawCentered(graphics, font, clipped, width / 2,
+                    Math.max(54, actionY - 13), warningColor);
         }
     }
 
@@ -383,7 +446,7 @@ public final class MessageEditorScreen extends Screen {
     private void saveAndClose() {
         captureFields();
         if (!MessageConfig.getInstance().replaceAll(draftNames, draftMessages, draftBindings)) {
-            showWarning(Component.translatable("screen.copyl.save_failed"), 0xFFFF7777);
+            showWarning(Component.translatable("screen.copyl.save_failed"), DispatchPalette.ERROR);
             return;
         }
         closeToParent();
@@ -404,7 +467,7 @@ public final class MessageEditorScreen extends Screen {
         }
 
         discardConfirmUntil = now + DISCARD_CONFIRM_MS;
-        showWarning(Component.translatable("screen.copyl.unsaved_changes"), 0xFFFFB777);
+        showWarning(Component.translatable("screen.copyl.unsaved_changes"), DispatchPalette.WARNING);
     }
 
     @Override

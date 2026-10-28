@@ -1,14 +1,14 @@
-# CopyL
+# CEDA Dispatch (CopyL)
 
-CopyL es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
+CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CopyL 3.3.0
+## CEDA Dispatch 3.9.4
 
-CopyL 3.3 mantiene el alcance mínimo de 3.x —solo mensajes/comandos rápidos— y mejora la portabilidad de la configuración y la fiabilidad del deploy.
+CEDA Dispatch usa la fuente normal de Minecraft en sus propias pantallas para evitar cuadros en lugar de letras. La mesa de ajustes combina papel, una esquina doblada y reglas de tinta con el cuaderno de GripeVerde. El botón para editar mensajes conserva el énfasis principal; todos los detalles son estáticos. Las traducciones cubren inglés de EE. UU., Australia, Canadá, Reino Unido y Nueva Zelanda, además de las siete variantes regionales de español.
 
 ### Qué hace
 
-CopyL ofrece **10 slots** independientes. Cada slot tiene:
+CEDA Dispatch ofrece **10 slots** independientes. Cada slot tiene:
 
 - nombre;
 - mensaje o comando;
@@ -29,9 +29,13 @@ La tecla global y los 10 slots aceptan:
 
 La tecla de apertura por defecto es `Alt derecho` y se cambia desde:
 
-`Mods > CopyL > Config`
+`Mods > CEDA Dispatch > Config`
 
 Si un atajo ya pertenece a otro slot, al reasignarlo se mueve al slot nuevo. La tecla usada para abrir CopyL queda reservada y no puede activar un mensaje al mismo tiempo.
+
+## Integración con GripeVerde
+
+Cuando ambos mods están instalados, un pequeño botón con icono de parte CEDA en la portada de GripeVerde abre esta configuración. No se agrega una dependencia obligatoria ni cambia el comportamiento si CEDA Dispatch está ausente.
 
 ## Editor
 
@@ -77,16 +81,10 @@ Si un JSON está corrupto, CopyL intenta moverlo a `*.broken-<timestamp>` y reco
 
 ## Idiomas
 
-Incluye:
+Incluye las 25 variantes regionales declaradas por el proyecto:
 
-- `en_us`;
-- `es_es`;
-- `es_ar`;
-- `es_cl`;
-- `es_ec`;
-- `es_mx`;
-- `es_uy`;
-- `es_ve`.
+- Inglés: `en_us`, `en_au`, `en_ca`, `en_gb`, `en_nz`.
+- Español: `es_es`, `es_mx`, `es_ar`, `es_419`, `es_bo`, `es_cl`, `es_co`, `es_cr`, `es_do`, `es_ec`, `es_gt`, `es_hn`, `es_ni`, `es_pa`, `es_pe`, `es_pr`, `es_py`, `es_sv`, `es_uy` y `es_ve`.
 
 ## Qué NO incluye
 
@@ -135,3 +133,6 @@ GitHub Actions:
 ## Deploy
 
 El PowerShell de deploy no compila nada localmente. Lee `version.txt` y `sha256.txt`, descarga `copyl-latest.jar.b64`, verifica su SHA-256 y reemplaza únicamente versiones anteriores de CopyL/Lclient en la instancia configurada. El mismo script puede instalar futuras versiones publicadas sin editar el número de versión a mano.
+
+
+La tipografía Atkinson Hyperlegible es de Braille Institute of America y se distribuye bajo SIL Open Font License 1.1; la licencia acompaña al mod en `assets/copyl/font/OFL.txt`.

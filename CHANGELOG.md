@@ -1,4 +1,63 @@
+## 3.9.4 — Every English and Spanish region
+
+- Add all 25 regional translation files, including the remaining Latin American Spanish variants.
+- Register custom Spanish regions in the resource metadata so they appear in Minecraft's language list.
+- Make the build enforce translation key parity and selectable-language metadata across the complete set.
+
+## 3.9.3 — Regional language coverage
+
+- Add English locale files for US, Australia, Canada, Great Britain, and New Zealand.
+- Keep all seven Spanish regional variants aligned with the same complete set of CEDA Dispatch messages.
+- Validate translation keys and non-empty values before resources are packaged.
+
+## 3.9.2 — Field desk, finished
+
+- Give the CEDA settings sheet a layered paper frame, a quiet folded corner, and ruled header so it matches GripeVerde's field-book style.
+- Keep the edit action visually primary and the panel details static; no gameplay or inventory animation is added.
+
+## 3.9.1 — Plain, reliable lettering
+
+CEDA Dispatch settings and message cards now use Minecraft's default font instead of a custom font provider that could render every label as empty boxes. The text stays unshadowed and keeps its paper-and-ink palette.
+
+## 3.9.0 — Clear type for field reports
+
+- Give CEDA Dispatch its own Atkinson Hyperlegible typeface, sized for quick reading over parchment.
+- Use the same font for buttons, headings, notices, and editable field copy; preserve cursor, selection, and horizontal scrolling.
+- Bundle the original SIL Open Font License with the font.
+- Keep Minecraft's other screens and gameplay typography unchanged.
+
+## 3.8.0 — A clear mark for the next hand
+
+- Give the focused keyboard control a still, two-tone CEDA outline so the next action is easy to spot.
+- Keep focus visible on each paper button without changing its size or adding movement.
+- Show an ellipsis when a narrow button cannot fit its label, while preserving the full accessible label.
+- Keep gameplay and inventory screens untouched.
+
+## 3.7.0 — Clear ink, field-worn paper
+
+- Flush the editor's first text pass before clearing its shadow, then draw the editable copy once in clean ink.
+- Give field-message cards a paper-cut edge, ruled writing line, and a quiet slot divider.
+- Soften the ink color and replace the clipped settings explanation with a short bilingual hint.
+- Keep all changes still and limited to the CEDA menu.
+
 # Changelog
+
+## 3.6.0 — Clean ink, clear controls
+
+- Replace the default grey controls with paper, sepia ink, and Ghoul teal buttons; give the main action a clear visual priority.
+- Draw button labels, page marks, slot labels, and editable text without the heavy default drop shadow.
+- Preserve normal text entry, cursor placement, selection, and horizontal scrolling while keeping the menu static.
+
+## 3.5.0 — compact field desk
+
+- Fit the settings panel to the available window and keep its backup actions usable in compact layouts.
+- Paginate the message editor by the rows that actually fit; keep save and cancel below the visible cards, including short and narrow windows.
+
+## 3.4.0 — CEDA dispatch paper
+
+- Rename the visible mod and settings-screen header to CEDA Dispatch while retaining the copyl mod ID, Java package, JSON schema, and config paths.
+- Restyle the settings and message editor around static parchment, sepia ink, and restrained Ghoul teal accents.
+- Add an optional, quiet shortcut from GripeVerde's title screen when both mods are installed; no required dependency is added.
 
 ## 3.3.0 — portable profiles + release hardening
 
