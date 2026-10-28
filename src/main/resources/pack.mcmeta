@@ -2,5 +2,72 @@
   "pack": {
     "description": "CopyL resources",
     "pack_format": 15
+  },
+  "language": {
+    "es_419": {
+      "name": "Español",
+      "region": "Latinoamérica",
+      "bidirectional": false
+    },
+    "es_bo": {
+      "name": "Español",
+      "region": "Bolivia",
+      "bidirectional": false
+    },
+    "es_co": {
+      "name": "Español",
+      "region": "Colombia",
+      "bidirectional": false
+    },
+    "es_cr": {
+      "name": "Español",
+      "region": "Costa Rica",
+      "bidirectional": false
+    },
+    "es_do": {
+      "name": "Español",
+      "region": "República Dominicana",
+      "bidirectional": false
+    },
+    "es_gt": {
+      "name": "Español",
+      "region": "Guatemala",
+      "bidirectional": false
+    },
+    "es_hn": {
+      "name": "Español",
+      "region": "Honduras",
+      "bidirectional": false
+    },
+    "es_ni": {
+      "name": "Español",
+      "region": "Nicaragua",
+      "bidirectional": false
+    },
+    "es_pa": {
+      "name": "Español",
+      "region": "Panamá",
+      "bidirectional": false
+    },
+    "es_pe": {
+      "name": "Español",
+      "region": "Perú",
+      "bidirectional": false
+    },
+    "es_pr": {
+      "name": "Español",
+      "region": "Puerto Rico",
+      "bidirectional": false
+    },
+    "es_py": {
+      "name": "Español",
+      "region": "Paraguay",
+      "bidirectional": false
+    },
+    "es_sv": {
+      "name": "Español",
+      "region": "El Salvador",
+      "bidirectional": false
+    }
   }
 }
