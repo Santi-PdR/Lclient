@@ -2,9 +2,9 @@
 
 CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CEDA Dispatch 3.9.2
+## CEDA Dispatch 3.9.3
 
-CEDA Dispatch usa la fuente normal de Minecraft en sus propias pantallas para evitar cuadros en lugar de letras. La mesa de ajustes ahora tiene bordes de papel superpuestos, una esquina doblada y una cabecera con reglas de tinta que combina con el cuaderno de GripeVerde. El botón para editar mensajes conserva el énfasis principal; todos los detalles son estáticos.
+CEDA Dispatch usa la fuente normal de Minecraft en sus propias pantallas para evitar cuadros en lugar de letras. La mesa de ajustes combina papel, una esquina doblada y reglas de tinta con el cuaderno de GripeVerde. El botón para editar mensajes conserva el énfasis principal; todos los detalles son estáticos. Las traducciones cubren inglés de EE. UU., Australia, Canadá, Reino Unido y Nueva Zelanda, además de las siete variantes regionales de español.
 
 ### Qué hace
 
