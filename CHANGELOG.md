@@ -1,3 +1,9 @@
+## 3.9.4 — Every English and Spanish region
+
+- Add all 25 regional translation files, including the remaining Latin American Spanish variants.
+- Register custom Spanish regions in the resource metadata so they appear in Minecraft's language list.
+- Make the build enforce translation key parity and selectable-language metadata across the complete set.
+
 ## 3.9.3 — Regional language coverage
 
 - Add English locale files for US, Australia, Canada, Great Britain, and New Zealand.
