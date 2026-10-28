@@ -75,7 +75,7 @@ tasks.register('verifyCopyLLocalization') {
         def files = fileTree(langDir) { include '*.json' }.files
         def available = files.collect { it.name.replaceFirst(/\.json$/, '') } as Set
         def problems = []
-        def packMetadata = parser.parse(new File('src/main/resources/pack.mcmeta'))
+        def packMetadata = new groovy.json.JsonSlurper().parse(new File('src/main/resources/pack.mcmeta'))
         def declaredLanguages = (packMetadata.language ?: [:]).keySet() as Set
         def requiredCustomLanguages = ['es_419', 'es_bo', 'es_co', 'es_cr', 'es_do', 'es_gt', 'es_hn', 'es_ni', 'es_pa', 'es_pe', 'es_pr', 'es_py', 'es_sv'] as Set
         def missingLanguageMetadata = requiredCustomLanguages - declaredLanguages
