@@ -192,27 +192,7 @@ public final class CopyLSettingsScreen extends Screen {
         renderBackground(graphics);
         graphics.fill(0, 0, width, height, DispatchPalette.NIGHT);
 
-        graphics.fill(panelLeft + 3, panelTop + 3,
-                panelLeft + panelWidth + 3, panelTop + panelHeight + 3,
-                DispatchPalette.PANEL_SHADOW);
-        graphics.fill(panelLeft, panelTop,
-                panelLeft + panelWidth, panelTop + panelHeight,
-                DispatchPalette.PAPER);
-        graphics.fill(panelLeft, panelTop,
-                panelLeft + 4, panelTop + panelHeight,
-                DispatchPalette.BLOOD);
-        graphics.fill(panelLeft + 4, panelTop,
-                panelLeft + panelWidth, panelTop + 1,
-                DispatchPalette.PAPER_RULE);
-        graphics.fill(panelLeft + 5, panelTop + 2,
-                panelLeft + panelWidth - 8, panelTop + 3,
-                0x44FFFFFF);
-        graphics.fill(panelLeft + panelWidth - 2, panelTop + 3,
-                panelLeft + panelWidth - 1, panelTop + panelHeight - 4,
-                DispatchPalette.PAPER_RULE);
-        graphics.fill(panelLeft + 10, panelTop + panelHeight - 3,
-                panelLeft + panelWidth - 10, panelTop + panelHeight - 2,
-                DispatchPalette.PAPER_RULE);
+        drawPaperPanel(graphics);
 
         int headerX = panelLeft + contentInset;
         DispatchText.draw(graphics, font, Component.translatable("screen.copyl.brand"),
@@ -245,6 +225,7 @@ public final class CopyLSettingsScreen extends Screen {
                     headerX, panelTop + 54, DispatchPalette.INK_MUTED);
         }
 
+        if (!compactLayout) drawHeaderRule(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
 
         if (feedbackVisible && !compactLayout) {
@@ -252,6 +233,70 @@ public final class CopyLSettingsScreen extends Screen {
             DispatchText.drawCentered(graphics, font, clipped, width / 2,
                     panelTop + panelHeight - 12, feedbackColor);
         }
+    }
+
+    /** Static paper detailing: single frame, no per-tick animation or gameplay work. */
+    private void drawPaperPanel(GuiGraphics graphics) {
+        int right = panelLeft + panelWidth;
+        int bottom = panelTop + panelHeight;
+
+        graphics.fill(panelLeft + 3, panelTop + 4, right + 3, bottom + 4,
+                DispatchPalette.PANEL_SHADOW);
+        graphics.fill(panelLeft, panelTop, right, bottom, DispatchPalette.PAPER);
+
+        // Bound book spine, with a narrow teal seam to tie it to the dispatch palette.
+        graphics.fill(panelLeft, panelTop, panelLeft + 4, bottom, DispatchPalette.BLOOD);
+        graphics.fill(panelLeft + 4, panelTop + 5, panelLeft + 5, bottom - 5,
+                DispatchPalette.GHOUL_TEAL);
+        for (int mark : new int[] { 12, panelHeight / 2, panelHeight - 13 }) {
+            if (mark > 5 && mark < panelHeight - 5) {
+                graphics.fill(panelLeft + 1, panelTop + mark, panelLeft + 3,
+                        panelTop + mark + 2, DispatchPalette.GOLD);
+            }
+        }
+
+        // Fine double rules keep the sheet from reading as a flat rectangle.
+        graphics.fill(panelLeft + 8, panelTop + 1, right - 5, panelTop + 2,
+                DispatchPalette.PAPER_RULE);
+        graphics.fill(panelLeft + 8, panelTop + 5, right - 9, panelTop + 6,
+                0x55FFFFFF);
+        graphics.fill(right - 3, panelTop + 7, right - 2, bottom - 8,
+                DispatchPalette.PAPER_RULE);
+        graphics.fill(panelLeft + 10, bottom - 4, right - 10, bottom - 3,
+                DispatchPalette.PAPER_RULE);
+        graphics.fill(panelLeft + 8, bottom - 7, right - 9, bottom - 6,
+                0x44FFFFFF);
+
+        // Small folded upper corner, built from fixed pixels rather than an image or animation.
+        int foldWidth = Math.min(8, Math.max(0, panelWidth - 12));
+        for (int row = 0; row < foldWidth; row++) {
+            int x = right - foldWidth + row;
+            int y = panelTop + 2 + row;
+            if (x < right - 2 && y < bottom - 2) {
+                graphics.fill(x, y, right - 2, y + 1,
+                        row < foldWidth / 2 ? 0x88FFFFFF : DispatchPalette.PAPER_RULE);
+            }
+        }
+
+        // Quiet paper specks add age without making the text harder to scan.
+        if (panelWidth > 100 && panelHeight > 90) {
+            graphics.fill(panelLeft + 18, panelTop + 34,
+                    panelLeft + 20, panelTop + 36, 0x26705A37);
+            graphics.fill(right - 24, bottom - 24,
+                    right - 22, bottom - 22, 0x26705A37);
+        }
+    }
+
+    private void drawHeaderRule(GuiGraphics graphics) {
+        int y = panelTop + 61;
+        int left = panelLeft + contentInset;
+        int right = panelLeft + panelWidth - contentInset;
+        int center = panelLeft + panelWidth / 2;
+        if (y >= panelTop + panelHeight || right - left < 20) return;
+
+        graphics.fill(left, y, center - 5, y + 1, DispatchPalette.PAPER_RULE);
+        graphics.fill(center + 5, y, right, y + 1, DispatchPalette.PAPER_RULE);
+        graphics.fill(center - 2, y - 1, center + 2, y + 2, DispatchPalette.GOLD);
     }
 
     @Override

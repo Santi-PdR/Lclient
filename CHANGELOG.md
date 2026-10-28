@@ -1,3 +1,8 @@
+## 3.9.2 — Field desk, finished
+
+- Give the CEDA settings sheet a layered paper frame, a quiet folded corner, and ruled header so it matches GripeVerde's field-book style.
+- Keep the edit action visually primary and the panel details static; no gameplay or inventory animation is added.
+
 ## 3.9.1 — Plain, reliable lettering
 
 CEDA Dispatch settings and message cards now use Minecraft's default font instead of a custom font provider that could render every label as empty boxes. The text stays unshadowed and keeps its paper-and-ink palette.
