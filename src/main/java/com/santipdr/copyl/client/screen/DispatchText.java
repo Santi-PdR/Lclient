@@ -3,21 +3,19 @@ package com.santipdr.copyl.client.screen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 
 /** Shared type and alignment rules for CEDA field-paper screens. */
 final class DispatchText {
-    private static final ResourceLocation FONT_ID = new ResourceLocation("copyl", "dispatch");
-
     private DispatchText() {
     }
 
-    static Component styled(Component text) {
-        return text.copy().withStyle(style -> style.withFont(FONT_ID));
+    /** Use plain Minecraft text so an unavailable custom font cannot become tofu boxes. */
+    static Component plain(Component text) {
+        return Component.literal(text.getString());
     }
 
     static int width(Font font, Component text) {
-        return font.width(styled(text));
+        return font.width(plain(text));
     }
 
     static int width(Font font, String text) {
@@ -26,7 +24,7 @@ final class DispatchText {
 
     static Component fit(Font font, Component text, int maxWidth) {
         int available = Math.max(1, maxWidth);
-        if (width(font, text) <= available) return styled(text);
+        if (width(font, text) <= available) return plain(text);
 
         String source = text.getString();
         StringBuilder prefix = new StringBuilder(source.length());
@@ -46,12 +44,12 @@ final class DispatchText {
         }
         String result = prefix.length() == 0 && width(font, ellipsis) > available
                 ? "" : prefix + ellipsis;
-        return styled(Component.literal(result));
+        return plain(Component.literal(result));
     }
 
     static void draw(GuiGraphics graphics, Font font, Component text,
                      int x, int y, int color) {
-        graphics.drawString(font, styled(text), x, y, color, false);
+        graphics.drawString(font, plain(text), x, y, color, false);
     }
 
     static void drawCentered(GuiGraphics graphics, Font font, String text,
@@ -61,7 +59,7 @@ final class DispatchText {
 
     static void drawCentered(GuiGraphics graphics, Font font, Component text,
                              int centerX, int y, int color) {
-        Component label = styled(text);
+        Component label = plain(text);
         graphics.drawString(font, label, centerX - font.width(label) / 2, y, color, false);
     }
 }

@@ -2,7 +2,7 @@
 
 CEDA Dispatch es un mod **100% client-side** para Minecraft Forge 1.20.1 dedicado únicamente a mensajes y comandos rápidos.
 
-## CEDA Dispatch 3.9.0
+## CEDA Dispatch 3.9.1
 
 CEDA Dispatch usa ahora una tipografía Atkinson Hyperlegible, pensada para distinguir letras con claridad sobre el papel. Se aplica a botones, encabezados y campos escritos, sin cambiar la fuente del resto de Minecraft. Se conserva el cursor, la selección y el desplazamiento del texto; el contorno de foco por teclado y las tarjetas de papel siguen quietos y limitados a estas pantallas.
 

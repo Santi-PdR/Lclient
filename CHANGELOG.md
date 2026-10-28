@@ -1,3 +1,7 @@
+## 3.9.1 — Plain, reliable lettering
+
+CEDA Dispatch settings and message cards now use Minecraft's default font instead of a custom font provider that could render every label as empty boxes. The text stays unshadowed and keeps its paper-and-ink palette.
+
 ## 3.9.0 — Clear type for field reports
 
 - Give CEDA Dispatch its own Atkinson Hyperlegible typeface, sized for quick reading over parchment.
