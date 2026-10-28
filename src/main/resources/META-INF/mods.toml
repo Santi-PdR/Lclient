@@ -4,18 +4,18 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="copyl"
-version="3.9.2"
+version="3.9.3"
 displayName="CEDA Dispatch"
 authors="Santi-PdR"
 displayURL="https://github.com/Santi-PdR/Lclient"
 description='''
-CEDA Dispatch (CopyL) es un mod 100% client-side para Forge 1.20.1 dedicado exclusivamente a mensajes y comandos rápidos.
+CEDA Dispatch is a client-side quick-message mod for Minecraft Forge 1.20.1. Save up to ten messages or commands and send them with keyboard or mouse shortcuts.
 
-Incluye 10 slots configurables con nombre, texto/comando y atajo propio. Los atajos pueden ser teclas o botones del mouse, se gestionan dentro de CopyL y no aparecen en Opciones > Controles.
+The interface is available in English and Spanish, including Minecraft's regional variants. Its field-paper panels use static details and clear, unshadowed text. It adds no animation or rendering work to active gameplay.
 
-CEDA Dispatch 3.6 mejora el acabado visual de las pantallas con controles propios de papel e tinta sin sombra pesada. Se conserva el ajuste para ventanas pequeñas de la versión 3.5 y el backup/restauración completa por portapapeles de la versión 3.4. El texto escrito y las etiquetas se dibujan sin sombra para mantener una lectura clara. las pantallas de ajustes y edición a ventanas pequeñas y escalas de GUI altas. Conserva el backup/restauración completa por portapapeles añadido en 3.4, con validación de formato, confirmación antes de importar y persistencia segura. La versión 3.4 añade backup/restauración completa por portapapeles para mover la configuración entre instancias, con validación de formato, confirmación antes de importar y persistencia segura. También endurece el pipeline que publica el JAR instalable para impedir que archivos generados por Gradle contaminen build-output.
+Español: CEDA Dispatch es un mod de mensajes rápidos para Minecraft Forge 1.20.1. Guarda hasta diez mensajes o comandos y envíalos con atajos de teclado o mouse.
 
-El contenido se envía exactamente como fue escrito, sin variables ni placeholders. CopyL no incluye Loot ESP, Smart Offhand, Recon, HUD táctico, Notification Center ni integración con JourneyMap.
+La interfaz está disponible en inglés y español, incluidas las variantes regionales de Minecraft. Sus paneles de papel mantienen detalles estáticos y texto claro, sin animaciones ni trabajo de renderizado durante la partida.
 '''
 displayTest="IGNORE_SERVER_VERSION"
 
