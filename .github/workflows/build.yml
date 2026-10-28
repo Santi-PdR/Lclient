@@ -50,6 +50,9 @@ jobs:
           unzip -Z1 "$JAR" > /tmp/copyl-entries.txt
           grep -Fxq 'META-INF/mods.toml' /tmp/copyl-entries.txt
           grep -Fxq 'com/santipdr/copyl/CopyL.class' /tmp/copyl-entries.txt
+          for locale in en_us en_au en_ca en_gb en_nz es_es es_ar es_cl es_ec es_mx es_uy es_ve; do
+            grep -Fxq 'assets/copyl/lang/$locale.json' /tmp/copyl-entries.txt
+          done
           grep -Fxq 'assets/copyl/font/dispatch.json' /tmp/copyl-entries.txt
           grep -Fxq 'assets/copyl/font/AtkinsonHyperlegible-Regular.ttf' /tmp/copyl-entries.txt
           grep -Fxq 'assets/copyl/font/OFL.txt' /tmp/copyl-entries.txt
