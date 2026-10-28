@@ -248,12 +248,9 @@ public final class CopyLSettingsScreen extends Screen {
         graphics.fill(panelLeft, panelTop, panelLeft + 4, bottom, DispatchPalette.BLOOD);
         graphics.fill(panelLeft + 4, panelTop + 5, panelLeft + 5, bottom - 5,
                 DispatchPalette.GHOUL_TEAL);
-        for (int mark : new int[] { 12, panelHeight / 2, panelHeight - 13 }) {
-            if (mark > 5 && mark < panelHeight - 5) {
-                graphics.fill(panelLeft + 1, panelTop + mark, panelLeft + 3,
-                        panelTop + mark + 2, DispatchPalette.GOLD);
-            }
-        }
+        drawSpineMark(graphics, 12);
+        drawSpineMark(graphics, panelHeight / 2);
+        drawSpineMark(graphics, panelHeight - 13);
 
         // Fine double rules keep the sheet from reading as a flat rectangle.
         graphics.fill(panelLeft + 8, panelTop + 1, right - 5, panelTop + 2,
@@ -284,6 +281,13 @@ public final class CopyLSettingsScreen extends Screen {
                     panelLeft + 20, panelTop + 36, 0x26705A37);
             graphics.fill(right - 24, bottom - 24,
                     right - 22, bottom - 22, 0x26705A37);
+        }
+    }
+
+    private void drawSpineMark(GuiGraphics graphics, int offset) {
+        if (offset > 5 && offset < panelHeight - 5) {
+            graphics.fill(panelLeft + 1, panelTop + offset, panelLeft + 3,
+                    panelTop + offset + 2, DispatchPalette.GOLD);
         }
     }
 
