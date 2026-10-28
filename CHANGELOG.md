@@ -1,3 +1,9 @@
+## 3.9.3 — Regional language coverage
+
+- Add English locale files for US, Australia, Canada, Great Britain, and New Zealand.
+- Keep all seven Spanish regional variants aligned with the same complete set of CEDA Dispatch messages.
+- Validate translation keys and non-empty values before resources are packaged.
+
 ## 3.9.2 — Field desk, finished
 
 - Give the CEDA settings sheet a layered paper frame, a quiet folded corner, and ruled header so it matches GripeVerde's field-book style.
